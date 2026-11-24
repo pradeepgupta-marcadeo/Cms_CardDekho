@@ -7,14 +7,14 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { config } from "../config.js";
 import { pool, rows } from "../db.js";
-import { publicBase, usesCloud } from "../lib/storage.js";
+import { authHeaders, publicBase, usesCloud } from "../lib/storage.js";
 
 if (!usesCloud) {
   console.error("Set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env first.");
   process.exit(1);
 }
-const { url, key, bucket } = config.storage;
-const auth = { authorization: `Bearer ${key}`, apikey: key };
+const { url, bucket } = config.storage;
+const auth = authHeaders;
 const TYPES = { ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml", ".gif": "image/gif", ".avif": "image/avif" };
 
 async function ensureBucket() {

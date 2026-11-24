@@ -18,6 +18,9 @@ export const fileUrl = (rel) => `${publicBase}/${rel}`;
 /** True for an address of a file this CMS stored (in the cloud bucket or the local uploads folder). */
 export const isOwnFile = (src) => String(src).startsWith(`${publicBase}/`) || String(src).startsWith(`${config.cmsUrl}/uploads/`);
 
+// New Supabase secret keys (sb_secret_...) go in the apikey header only; older service_role keys (a JWT) go in both.
+export const authHeaders = key?.startsWith("sb_") ? { apikey: key } : { authorization: `Bearer ${key}`, apikey: key };
+
 const encode = (rel) => rel.split("/").map(encodeURIComponent).join("/");
 
 /** Saves a file and returns its public address. */
@@ -33,7 +36,7 @@ export async function putFile(rel, data, contentType) {
     try {
       const res = await fetch(`${url}/storage/v1/object/${bucket}/${encode(rel)}`, {
         method: "POST",
-        headers: { authorization: `Bearer ${key}`, apikey: key, "content-type": contentType, "x-upsert": "true", "cache-control": "max-age=31536000" },
+        headers: { ...authHeaders, "content-type": contentType, "x-upsert": "true", "cache-control": "max-age=31536000" },
         body: data,
         signal: AbortSignal.timeout(60000),
       });
