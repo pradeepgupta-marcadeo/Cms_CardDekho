@@ -12,15 +12,19 @@ import { csrfToken, requireLogin, verifyCsrf } from "./lib/auth.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { backfillArticles } from "./lib/autofill.js";
 import { startCarScraper } from "./lib/carscraper.js";
+import { usesCloud } from "./lib/storage.js";
 import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { publicRouter } from "./routes/public.js";
 
 assertConfig();
-mkdirSync(config.uploadDir, { recursive: true });
+// On Vercel (no disk) images live in Supabase Storage, so there is no uploads folder to make.
+const ON_VERCEL = Boolean(process.env.VERCEL);
+if (!usesCloud && !ON_VERCEL) mkdirSync(config.uploadDir, { recursive: true });
 
 const app = express();
-app.set("trust proxy", "loopback");
+// Behind Vercel's proxy the visitor's https comes through one hop (needed for the secure login cookie).
+app.set("trust proxy", ON_VERCEL ? 1 : "loopback");
 app.set("view engine", "ejs");
 app.set("views", path.join(ROOT, "src", "views"));
 app.disable("x-powered-by");
@@ -93,7 +97,11 @@ app.use((err, req, res, _next) => {
   res.status(500).render("error", { title: "Something went wrong", message: err.message });
 });
 
-app.listen(config.port, () => {
+// On Vercel the app is a serverless function (api/index.js): no server of its own, no background jobs
+// (scraping and schedules run from the CMS on your own computer).
+export default app;
+
+if (!ON_VERCEL) app.listen(config.port, () => {
   console.log(`Wheelora CMS running at ${config.cmsUrl}/admin`);
   if (config.schedulerEnabled) startScheduler();
   // CarScrapper tab: close runs cut off by a restart; run its schedules only when the scheduler is on.

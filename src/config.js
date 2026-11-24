@@ -30,6 +30,8 @@ export const config = {
   userAgent: env("HTTP_USER_AGENT", "WheeloraCMS/1.0"),
   schedulerEnabled: env("SCHEDULER_ENABLED", "true") === "true",
   uploadDir: path.resolve(ROOT, env("UPLOAD_DIR", "uploads")),
+  // Supabase Storage for images (required on Vercel, which has no disk). Empty: the uploads folder is used.
+  storage: { url: env("SUPABASE_URL").replace(/\/$/, ""), key: env("SUPABASE_SERVICE_KEY"), bucket: env("SUPABASE_BUCKET", "uploads") },
   scraper: { url: env("SCRAPER_API_URL", "http://localhost:4100").replace(/\/$/, ""), token: env("SCRAPER_ADMIN_TOKEN") },
   // CarScrapper tab: the Python script in ../cardekho and the Python that runs it.
   carScraper: { python: env("CARSCRAPER_PYTHON", "python"), script: path.resolve(ROOT, env("CARSCRAPER_SCRIPT", "../cardekho/scrape.py")) },

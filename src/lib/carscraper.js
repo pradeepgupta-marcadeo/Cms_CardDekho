@@ -162,6 +162,8 @@ export async function brandSlug(text) {
 
 /** Starts a job in its own background process and returns its run id. Throws when one is already running. */
 export async function startScrape(mode, options = {}, by = "manual") {
+  // The live CMS on Vercel stops any request after a few minutes, so scraping runs from the CMS on your own computer.
+  if (process.env.VERCEL) throw new Error("Scraping does not run on the live CMS. Start the CMS on your own computer (npm run dev) and run it there; the live site gets the results by itself.");
   const m = MODES[mode];
   if (!m) throw new Error("Unknown scrape type.");
   if (m.simple) options = {}; // nothing to choose for this job

@@ -1,12 +1,12 @@
 // CarScrapper "360 view": copies CarWale's studio 360 frames (and the six faces of the cabin panorama) (read by `scrape.py --threesixty` into threesixty.jsonl)
 // into uploads/carwale360/<brand>/<model>/<view>-<colour>-<version>/, so the website serves them itself. The frames
 // keep CarWale's watermark, as CarWale's own player shows them. A view whose frames are already copied is skipped.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { config } from "../config.js";
 import { one, query, rows } from "../db.js";
 import { contentChanged } from "./publish.js";
+import { fileUrl, getFile, hasFile, putFile } from "./storage.js";
 
 export const SPIN_CREDIT = "CarWale";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
@@ -70,9 +70,7 @@ export async function importSpins(ctx, dataDir, { brand = null, limit = null } =
     const [brandSlug, model] = r.slug.split("/");
     const images = v.frames ?? v.faces;
     const dirName = `${kind}-${safe(v.colour)}-${safe(v.version)}`;
-    const dir = path.join(config.uploadDir, "carwale360", safe(brandSlug), safe(model), dirName);
-    mkdirSync(dir, { recursive: true });
-    const base = `${config.cmsUrl}/uploads/carwale360/${safe(brandSlug)}/${safe(model)}/${dirName}`;
+    const folder = `carwale360/${safe(brandSlug)}/${safe(model)}/${dirName}`;
     try {
       const frames = new Array(images.length);
       let size = null;
@@ -81,20 +79,19 @@ export async function importSpins(ctx, dataDir, { brand = null, limit = null } =
         await Promise.all(
           images.slice(k, k + 4).map(async (url, j) => {
             const n = k + j + 1;
-            const file = path.join(dir, `${n}.webp`);
-            if (!existsSync(file)) {
+            const rel = `${folder}/${n}.webp`;
+            if (!(await hasFile(rel))) {
               const buf = await fetchFrame(url);
               // CarWale already serves WebP; anything else is converted.
               const meta = await sharp(buf).metadata();
-              if (meta.format === "webp") writeFileSync(file, buf);
-              else await sharp(buf).webp({ quality: 82 }).toFile(file);
+              await putFile(rel, meta.format === "webp" ? buf : await sharp(buf).webp({ quality: 82 }).toBuffer(), "image/webp");
               size ??= { w: meta.width, h: meta.height };
             }
-            frames[k + j] = `${base}/${n}.webp`;
+            frames[k + j] = fileUrl(rel);
           }),
         );
       }
-      size ??= await sharp(path.join(dir, "1.webp")).metadata().then((m) => ({ w: m.width, h: m.height }));
+      size ??= await sharp(await getFile(`${folder}/1.webp`)).metadata().then((m) => ({ w: m.width, h: m.height }));
       await one(
         `INSERT INTO car_spins (car_slug, kind, source_page, colour, version, frames, w, h, meta, status, error, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'done',NULL,now())
          ON CONFLICT (car_slug, kind) DO UPDATE SET source_page = EXCLUDED.source_page, colour = EXCLUDED.colour, version = EXCLUDED.version, frames = EXCLUDED.frames,

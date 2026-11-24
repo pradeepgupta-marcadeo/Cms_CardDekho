@@ -1,11 +1,10 @@
-import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { Router } from "express";
 import multer from "multer";
 import sharp from "sharp";
-import { config } from "../config.js";
 import { one, query, rows } from "../db.js";
 import { audit, contentChanged } from "../lib/publish.js";
+import { putFile } from "../lib/storage.js";
 import { slugify } from "../lib/text.js";
 
 export const mediaRouter = Router();
@@ -14,8 +13,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 // Every upload is resized to at most 1600px wide and saved as WebP, so pages stay fast (LCP).
 export async function saveImage(file, { alt = "", credit = "" } = {}) {
   const now = new Date();
-  const dir = path.join(config.uploadDir, String(now.getFullYear()), String(now.getMonth() + 1).padStart(2, "0"));
-  mkdirSync(dir, { recursive: true });
+  const folder = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+  let url;
   const base = `${slugify(path.parse(file.originalname).name).slice(0, 50) || "image"}-${Date.now().toString(36)}`;
   let filename;
   let w;
@@ -25,16 +24,15 @@ export async function saveImage(file, { alt = "", credit = "" } = {}) {
     const svg = file.buffer.toString("utf8");
     if (/<script|on\w+=|javascript:/i.test(svg)) throw new Error("This SVG contains scripts and was rejected.");
     filename = `${base}.svg`;
-    const { writeFileSync } = await import("node:fs");
-    writeFileSync(path.join(dir, filename), svg);
+    url = await putFile(`${folder}/${filename}`, Buffer.from(svg, "utf8"), "image/svg+xml");
     const meta = await sharp(file.buffer).metadata().catch(() => ({ width: 512, height: 256 }));
     [w, h, bytes] = [meta.width ?? 512, meta.height ?? 256, file.size];
   } else {
     filename = `${base}.webp`;
-    const out = await sharp(file.buffer).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toFile(path.join(dir, filename));
+    const { data, info: out } = await sharp(file.buffer).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer({ resolveWithObject: true });
+    url = await putFile(`${folder}/${filename}`, data, "image/webp");
     [w, h, bytes] = [out.width, out.height, out.size];
   }
-  const url = `${config.cmsUrl}/uploads/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${filename}`;
   return one("INSERT INTO media (filename, url, w, h, bytes, alt, credit) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *", [filename, url, w, h, bytes, alt, credit]);
 }
 

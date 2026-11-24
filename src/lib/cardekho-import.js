@@ -1,11 +1,11 @@
 // CarScrapper tab: saves the scraped JSONL files into the CMS database (cardekho_* tables) and copies the
 // pictures into the Media library. Nothing here touches the website catalogue (cars, variants, photos).
-import { createReadStream, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import sharp from "sharp";
-import { config } from "../config.js";
 import { one, query, rows, tx } from "../db.js";
+import { putFile } from "./storage.js";
 import { slugify } from "./text.js";
 
 export const DATA_FILES = {
@@ -186,11 +186,10 @@ export function carPictures(rec) {
 }
 
 async function saveWebp(buffer, car, pic) {
-  const dir = path.join(config.uploadDir, "cardekho", slugify(car.brand) || "brand");
-  mkdirSync(dir, { recursive: true });
+  const folder = `cardekho/${slugify(car.brand) || "brand"}`;
   const filename = `${slugify(`${car.slug.split("/")[1]}-${pic.title}`).slice(0, 70) || "photo"}-${Date.now().toString(36)}.webp`;
-  const out = await sharp(buffer).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 86, smartSubsample: true }).toFile(path.join(dir, filename));
-  const url = `${config.cmsUrl}/uploads/cardekho/${path.basename(dir)}/${filename}`;
+  const { data, info: out } = await sharp(buffer).rotate().resize({ width: 1600, withoutEnlargement: true }).webp({ quality: 86, smartSubsample: true }).toBuffer({ resolveWithObject: true });
+  const url = await putFile(`${folder}/${filename}`, data, "image/webp");
   const alt = `${car.name} ${pic.kind === "colour" ? `in ${pic.title}` : pic.title}`.trim();
   return one("INSERT INTO media (filename, url, w, h, bytes, alt, credit, license) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id", [filename, url, out.width, out.height, out.size, alt, PHOTO_CREDIT, PHOTO_LICENSE]);
 }
