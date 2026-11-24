@@ -1,0 +1,35 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div><p class="sub"><a href="/admin/articles">← News Manager</a></p><h1>Preview</h1><p class="sub">How this article reads, and how it scores for search. Nothing here is live until it is published.</p></div>
+  <div class="actions">
+    <form class="inline" method="post" action="/admin/articles/<%= a.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn <%= a.status === 'published' ? 'light' : 'lime' %>"><%= a.status === "published" ? "↩ Move back to pending" : "✓ Publish" %></button></form>
+    <a class="btn light" href="/admin/articles/<%= a.id %>">✎ Edit</a>
+    <% if (a.status === "published") { %><a class="btn light" href="<%= siteUrl %><%= path %>" target="_blank" rel="noopener">View on website ↗</a><% } %>
+  </div>
+</div>
+<div class="layout-2">
+  <article class="card">
+    <span class="state <%= a.status === 'published' ? 'ok' : 'warn' %>"><i></i><%= a.status === "published" ? "Published" : "Pending" %></span>
+    <h2 style="font-size:26px;margin:12px 0 4px"><%= a.title %></h2>
+    <p class="muted"><%= KINDS[a.kind] %> · <%= a.category %> · <%= a.author %> · <%= String(a.published_on).slice(0, 10) %> · <%= a.minutes %> min read</p>
+    <% if (photo) { %><img src="<%= photo %>" alt="" style="width:100%;max-height:340px;object-fit:cover;border-radius:12px;margin:8px 0"><% } %>
+    <p><em><%= a.excerpt %></em></p>
+    <% if (a.body_html) { %><div class="rich"><%- a.body_html %></div><% } else { %><% for (const s of a.body) { %><% if (s.h) { %><h3><%= s.h %></h3><% } %><% for (const p of s.p) { %><p><%= p %></p><% } %><% } %><% } %>
+    <% if (a.seo && a.seo.faqs && a.seo.faqs.length) { %><h3>FAQs</h3><% for (const f of a.seo.faqs) { %><p><b><%= f.q %></b><br><%= f.a %></p><% } %><% } %>
+    <% if (a.source && a.source.url) { %><p class="hint">Based on a report by <a href="<%= a.source.url %>" target="_blank" rel="noopener"><%= a.source.name %></a>.</p><% } %>
+  </article>
+  <aside class="seo-box">
+    <div class="card">
+      <h2>SEO score</h2>
+      <div class="score"><%= seo.score %>%</div>
+      <div class="muted"><%= seo.words %> words</div>
+      <ul class="checks"><% for (const c of seo.checks) { %><li class="<%= c.ok ? 'ok' : '' %>"><%= c.label %><% if (!c.ok) { %><div class="hint"><%= c.hint %></div><% } %></li><% } %></ul>
+    </div>
+    <div class="card"><h2>Search preview</h2>
+      <p style="color:#047857;font-size:12px;margin:0"><%= siteUrl %><%= path %></p>
+      <p style="color:#1a0dab;font-size:17px;margin:2px 0"><%= (a.seo && a.seo.title) || a.title %></p>
+      <p class="muted"><%= (a.seo && a.seo.description) || a.excerpt %></p>
+    </div>
+  </aside>
+</div>
+<%- include("partials/foot") %>

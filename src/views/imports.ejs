@@ -1,0 +1,22 @@
+<%- include("partials/head", { title }) %>
+<h1>Import free data</h1>
+<p class="sub">Each button brings real data from a free, legal source. The import runs in the background; after that, the website refreshes by itself. Nothing is copied from other car websites (CarDekho, CarWale...), because their terms do not allow it.</p>
+<div class="grid g2 mt">
+  <% for (const [key, imp] of Object.entries(IMPORTERS)) { const l = last[key]; %>
+    <div class="card">
+      <h2><%= imp.title %></h2>
+      <p><%= imp.what %></p>
+      <p class="effect"><%= imp.effect %></p>
+      <p class="hint"><strong>License:</strong> <%= imp.license %> · <strong>Runs:</strong> <%= imp.schedule %></p>
+      <% if (l) { %><p class="muted">Last run: <%= l.started_at.toLocaleString("en-IN") %> · <a href="/admin/imports/runs/<%= l.id %>"><span class="pill <%= l.status === 'done' ? 'ok' : l.status === 'failed' ? 'bad' : 'warn' %>"><%= l.status %></span></a></p><% } %>
+      <form method="post" action="/admin/imports/<%= key %>"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn <%= imp.needsKey ? 'light' : 'lime' %>" <%= imp.needsKey ? "disabled" : "" %>><%= imp.needsKey ? "Needs API key" : "Run now" %></button></form>
+    </div>
+  <% } %>
+</div>
+<div class="card">
+  <h2>Recent runs</h2>
+  <table><thead><tr><th>#</th><th>Import</th><th>Status</th><th>Started</th><th>Finished</th></tr></thead><tbody>
+  <% for (const r of runs) { %><tr><td><a href="/admin/imports/runs/<%= r.id %>"><%= r.id %></a></td><td><%= r.kind %></td><td><span class="pill <%= r.status === 'done' ? 'ok' : r.status === 'failed' ? 'bad' : 'warn' %>"><%= r.status %></span></td><td><%= r.started_at.toLocaleString("en-IN") %></td><td><%= r.finished_at ? r.finished_at.toLocaleString("en-IN") : "—" %></td></tr><% } %>
+  </tbody></table>
+</div>
+<%- include("partials/foot") %>

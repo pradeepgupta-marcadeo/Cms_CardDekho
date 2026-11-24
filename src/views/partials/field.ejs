@@ -1,0 +1,39 @@
+<%
+  const id = "f_" + f.name;
+  let v = row[f.name];
+  if (v === null || v === undefined) v = f.default ?? "";
+  const hint = f.hintFrom ? row[f.hintFrom] : f.hint;
+  const show = (x) => (x === null || x === undefined ? "" : x);
+%>
+<div class="field">
+  <% if (f.type === "bool") { %>
+    <label class="check"><input type="checkbox" id="<%= id %>" name="<%= f.name %>" <%= v === true || v === "on" ? "checked" : "" %>> <%= f.label %></label>
+  <% } else { %>
+    <label class="f" for="<%= id %>"><%= f.label %><%= f.required ? " *" : "" %></label>
+    <% if (f.readonly) { %>
+      <div><%= show(v) %></div>
+    <% } else if (f.type === "textarea") { %>
+      <textarea id="<%= id %>" name="<%= f.name %>" <%= f.required ? "required" : "" %>><%= show(v) %></textarea>
+    <% } else if (f.type === "json") { %>
+      <textarea class="mono" id="<%= id %>" name="<%= f.name %>" data-json><%= typeof v === "string" ? v : JSON.stringify(v, null, 1) %></textarea>
+    <% } else if (f.type === "select") { %>
+      <select id="<%= id %>" name="<%= f.name %>"><% for (const o of f.options) { %><option <%= String(v) === o ? "selected" : "" %>><%= o %></option><% } %></select>
+    <% } else if (f.type === "fk") { %>
+      <select id="<%= id %>" name="<%= f.name %>" <%= f.required ? "required" : "" %>>
+        <option value="">Choose…</option>
+        <% for (const o of (options[f.name] || [])) { %><option value="<%= o.value %>" <%= String(v) === String(o.value) ? "selected" : "" %>><%= o.label %></option><% } %>
+      </select>
+    <% } else if (f.type === "tags") { %>
+      <input type="text" id="<%= id %>" name="<%= f.name %>" value="<%= Array.isArray(v) ? v.join(", ") : show(v) %>">
+    <% } else if (f.type === "image") { %>
+      <% const src = v && typeof v === "object" ? v.src : v; %>
+      <% if (src) { %><img src="<%= src.startsWith("/") && !src.startsWith("/uploads") ? siteUrl + src : src %>" alt="" style="max-height:60px;max-width:200px;display:block;margin-bottom:6px;background:#111;padding:6px;border-radius:8px"><% } %>
+      <input type="text" id="<%= id %>" name="<%= f.name %>" value="<%= v && typeof v === "object" ? JSON.stringify(v) : show(v) %>" data-media-target>
+      <button type="button" class="btn light small mt" data-pick-media="<%= id %>">Upload or choose image</button>
+    <% } else { %>
+      <input type="<%= f.type === "number" || f.type === "decimal" ? "number" : f.type === "date" ? "date" : "text" %>" <%= f.type === "decimal" ? `step=${f.step || "any"}` : "" %> <%= f.min !== undefined ? `min=${f.min}` : "" %> <%= f.max !== undefined ? `max=${f.max}` : "" %> id="<%= id %>" name="<%= f.name %>" value="<%= f.type === "date" && v ? String(v).slice(0, 10) : show(v) %>" <%= f.required ? "required" : "" %>>
+    <% } %>
+  <% } %>
+  <% if (hint) { %><div class="hint"><%= hint %></div><% } %>
+  <% if (f.effect) { %><div class="effect"><%= f.effect %></div><% } %>
+</div>

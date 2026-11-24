@@ -1,0 +1,46 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div><h1>Scraper overview</h1><p class="sub">The scraper only takes data from sources that gave permission (following robots.txt and the licence). New data stays "pending" first. You review and approve it, then "Import" moves it into the CMS. Nothing on the website changes until then.</p></div>
+  <div class="actions"><a class="btn light" href="/admin/scraper/sources">Sources</a><a class="btn lime" href="/admin/scraper/cars?status=pending">Review scraped cars</a></div>
+</div>
+<div class="grid g4">
+  <div class="card"><div class="stat"><%= d.records.total %><small>scraped records</small></div></div>
+  <div class="card"><div class="stat"><a href="/admin/scraper/cars?status=pending"><%= d.records.pending %></a><small>pending approval</small></div></div>
+  <div class="card"><div class="stat"><%= d.records.approved %><small>approved, not yet imported</small></div></div>
+  <div class="card"><div class="stat"><%= d.records.imported %><small>imported into the CMS</small></div></div>
+</div>
+<div class="grid g4">
+  <div class="card"><div class="stat"><%= d.records.rejected %><small>rejected</small></div></div>
+  <div class="card"><div class="stat"><a href="/admin/scraper/imports?status=failed"><%= counts.failed %></a><small>failed imports · <%= d.jobs.failed %> failed jobs</small></div></div>
+  <div class="card"><div class="stat"><a href="/admin/scraper/cars?duplicates=1"><%= d.records.duplicates %></a><small>possible duplicates</small></div></div>
+  <div class="card"><div class="stat"><a href="/admin/scraper/cars?missing=1"><%= d.records.withMissingData %></a><small>records with missing data</small></div></div>
+</div>
+<div class="grid g2">
+  <div class="card">
+    <h2>Catalogue collected (approved)</h2>
+    <p><strong><%= d.catalogue.brands %></strong> brands · <strong><%= d.catalogue.models %></strong> models · <strong><%= d.catalogue.variants %></strong> variants · <strong><%= d.catalogue.specifications %></strong> spec sheets · <strong><%= d.catalogue.images %></strong> images</p>
+    <p class="muted">Last successful scrape: <%= d.jobs.lastSuccessAt ? new Date(d.jobs.lastSuccessAt).toLocaleString("en-IN") + " (" + d.jobs.lastSuccessSource + ")" : "never" %></p>
+    <h3 class="mt">Data sources</h3>
+    <table><tbody>
+      <% for (const s of d.sources) { %><tr><td><a href="/admin/scraper/sources/<%= s.id %>"><%= s.name %></a></td><td><span class="pill <%= s.enabled ? 'ok' : '' %>"><%= s.enabled ? "enabled" : "disabled" %></span> <% if (!s._count.permissions) { %><span class="pill warn">no permission</span><% } %></td><td class="muted nowrap"><%= s.lastSuccessAt ? new Date(s.lastSuccessAt).toLocaleDateString("en-IN") : "—" %></td></tr><% } %>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <h2>Missing data report</h2>
+    <p class="hint">Fields most often missing in records waiting for review or import. Missing values stay empty: nothing is guessed.</p>
+    <table><tbody><% for (const g of d.missingData) { %><tr><td><%= g.field %></td><td class="right"><%= g.n %> records</td></tr><% } %></tbody></table>
+    <% if (!d.missingData.length) { %><p class="muted">Nothing missing.</p><% } %>
+  </div>
+</div>
+<div class="grid g2">
+  <div class="card">
+    <h2>Recent scraping jobs</h2>
+    <table><tbody><% for (const j of d.jobs.recent) { const s = j.stats || {}; %><tr><td><a href="/admin/scraper/jobs/<%= j.id %>"><%= j.source.name %></a><div class="muted"><%= new Date(j.createdAt).toLocaleString("en-IN") %> · <%= j.trigger %></div></td><td><span class="pill <%= j.status === 'succeeded' ? 'ok' : j.status === 'failed' ? 'bad' : 'warn' %>"><%= j.status %></span></td><td class="muted"><%= s.found ?? 0 %> found · <%= s.new ?? 0 %> new · <%= s.updated ?? 0 %> updated · <%= s.failed ?? 0 %> failed</td></tr><% } %></tbody></table>
+  </div>
+  <div class="card">
+    <h2>Recent imports</h2>
+    <p class="muted"><%= counts.done %> done · <%= counts.waiting %> awaiting confirmation · <%= counts.failed %> failed · <a href="/admin/scraper/imports">all</a></p>
+    <table><tbody><% for (const i of imports) { %><tr><td><%= i.title %></td><td><%= i.action %></td><td><span class="pill <%= i.status === 'done' ? 'ok' : i.status === 'failed' ? 'bad' : 'warn' %>"><%= i.status.replace(/_/g, " ") %></span></td></tr><% } %></tbody></table>
+  </div>
+</div>
+<%- include("partials/foot") %>

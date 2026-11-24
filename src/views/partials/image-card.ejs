@@ -1,0 +1,39 @@
+<%
+  // One image slot of the article form. Parameters: prefix (image | cover | og), label, hint, specs, tips, aspect,
+  // withAlt (alt text and title fields), withCredit, a (the article).
+  const src = a[prefix + "_src"] || "";
+  const shown = !src ? "" : /^https?:/.test(src) || src.startsWith("/uploads") ? src : siteUrl + src;
+%>
+<section class="card imgcard" data-imgcard="<%= prefix %>">
+  <h3 class="cap"><%= label %></h3>
+  <% if (hint) { %><p class="hint" style="margin:0 0 10px"><%= hint %></p><% } %>
+  <% if (specs && specs.length) { %>
+    <dl class="specs"><% for (const [k, v] of specs) { %><div><dt><%= k %></dt><dd><%= v %></dd></div><% } %></dl>
+  <% } %>
+  <% if (tips && tips.length) { %><ul class="tips"><% for (const t of tips) { %><li><%= t %></li><% } %></ul><% } %>
+  <div class="drop" data-drop>
+    <div class="drop-empty" data-empty <%= shown ? "hidden" : "" %>>
+      <span class="drop-ico" aria-hidden="true">🖼</span>
+      <button type="button" class="btn light small" data-choose>Choose an image</button>
+      <p class="hint">Upload, drag and drop, or paste a URL below</p>
+    </div>
+    <div class="drop-filled" data-filled <%= shown ? "" : "hidden" %>>
+      <div class="drop-prev" style="aspect-ratio: <%= aspect %>"><img src="<%= shown %>" alt="" data-preview></div>
+      <div class="drop-btns"><button type="button" class="btn light small" data-choose>Replace</button><button type="button" class="btn danger small" data-remove>Remove</button></div>
+    </div>
+  </div>
+  <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-file>
+  <p class="err" data-error hidden></p>
+  <div class="field" style="margin-top:12px"><label class="f" for="<%= prefix %>_src">Image URL</label><input id="<%= prefix %>_src" name="<%= prefix %>_src" type="url" value="<%= src %>" placeholder="https://…" data-url></div>
+  <input type="hidden" name="<%= prefix %>_w" value="<%= a[prefix + '_w'] || '' %>" data-w>
+  <input type="hidden" name="<%= prefix %>_h" value="<%= a[prefix + '_h'] || '' %>" data-h>
+  <% if (withAlt) { %>
+    <div class="grid g2">
+      <div class="field"><label class="f" for="<%= prefix %>_alt">Alt text</label><input id="<%= prefix %>_alt" name="<%= prefix %>_alt" type="text" value="<%= a[prefix + '_alt'] || '' %>" placeholder="Alternative text for accessibility"></div>
+      <div class="field"><label class="f" for="<%= prefix %>_title">Title</label><input id="<%= prefix %>_title" name="<%= prefix %>_title" type="text" value="<%= a[prefix + '_title'] || '' %>" placeholder="Tooltip text on hover"></div>
+    </div>
+  <% } %>
+  <% if (withCredit) { %>
+    <div class="field"><label class="f" for="image_credit">Credit</label><input id="image_credit" name="image_credit" type="text" value="<%= a.image_credit || '' %>" placeholder="Photo: source name"><div class="hint">Shown under the picture on the article page.</div></div>
+  <% } %>
+</section>

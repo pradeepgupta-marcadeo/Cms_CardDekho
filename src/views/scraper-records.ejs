@@ -1,0 +1,39 @@
+<%- include("partials/head", { title }) %>
+<h1>Images, news & brands</h1>
+<p class="sub">Photos (free-licence only, with credit), news headlines (headline and link only; the full article is never copied) and brands. Approve, then Import: photos go to the car's Photos tab, news goes to "News inbox", and brands go to Brands.</p>
+<nav class="tabs mt">
+  <% for (const [k, l] of [["image", "Photos"], ["news", "News headlines"], ["brand", "Brands"]]) { %><a href="?entityType=<%= k %>&status=<%= status %>" class="<%= entityType === k ? 'on' : '' %>"><%= l %></a><% } %>
+</nav>
+<div class="card">
+  <form class="toolbar" method="get">
+    <input type="hidden" name="entityType" value="<%= entityType %>">
+    <input type="search" name="q" value="<%= q %>" placeholder="Search…" aria-label="Search">
+    <% for (const s of ["pending", "approved", "imported", "rejected"]) { %><button class="btn <%= status === s ? '' : 'light' %> small" name="status" value="<%= s %>"><%= s %></button><% } %>
+    <span class="muted"><%= data.total %> records</span>
+  </form>
+  <form method="post" action="/admin/scraper/records/bulk">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="toolbar">
+      <label class="check"><input type="checkbox" data-check-all> Select all on this page</label>
+      <% if (status === "pending") { %><button class="btn lime small" name="do" value="approve" data-busy="Approving… (photos are downloaded and checked)">Approve ticked</button><button class="btn danger small" name="do" value="reject" data-confirm="Reject the ticked records?">Reject ticked</button><% } %>
+      <% if (status === "approved") { %><button class="btn lime small" name="do" value="import" data-busy="Importing…">Import ticked into the CMS</button><% } %>
+    </div>
+    <table>
+      <thead><tr><th></th><th><%= entityType === "image" ? "Photo" : entityType === "news" ? "Headline" : "Brand" %></th><th>Source</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <% for (const r of data.items) { %>
+          <tr>
+            <td><input type="checkbox" name="ids" value="<%= r.id %>" aria-label="Select"></td>
+            <td><a href="<%= r.sourceUrl %>" target="_blank" rel="noopener"><%= r.title %></a></td>
+            <td><%= r.source.name %></td>
+            <td><span class="pill <%= r.status === 'imported' ? 'ok' : r.status === 'approved' ? 'lime' : r.status === 'rejected' ? 'bad' : 'warn' %>"><%= r.status %></span></td>
+            <td class="muted"><%= r.importError || (r.missingFields.length ? "missing: " + r.missingFields.join(", ") : "") %></td>
+          </tr>
+        <% } %>
+        <% if (!data.items.length) { %><tr><td colspan="5" class="muted">Nothing here.</td></tr><% } %>
+      </tbody>
+    </table>
+  </form>
+  <% if (pages > 1) { %><div class="pager"><% for (let i = 1; i <= Math.min(pages, 20); i++) { %><a class="btn <%= i === page ? '' : 'light' %> small" href="?entityType=<%= entityType %>&status=<%= status %>&q=<%= encodeURIComponent(q) %>&page=<%= i %>"><%= i %></a><% } %></div><% } %>
+</div>
+<%- include("partials/foot") %>

@@ -1,0 +1,18 @@
+<%- include("partials/head", { title }) %>
+<p class="sub"><a href="/admin/cars">← Cars</a></p>
+<h1>Add a car</h1>
+<p class="sub">A new car starts as 'hidden'. After you add details, variants and one photo, tick 'Show on website'. For an upcoming car, keep the status 'upcoming'. On launch day, change it to 'new-launch' and it will appear by itself in 'Just launched' on the home page.</p>
+<% if (error) { %><div class="errors mt"><%= error %></div><% } %>
+<form class="card mt" method="post" action="/admin/cars/new">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="grid g2">
+    <div class="field"><label class="f" for="brand_id">Brand</label>
+      <select id="brand_id" name="brand_id"><option value="">Choose…</option><% for (const b of brands) { %><option value="<%= b.id %>"><%= b.name %></option><% } %></select>
+      <div class="hint">Not in the list? Type a new brand below.</div></div>
+    <div class="field"><label class="f" for="new_brand">Or a new brand</label><input id="new_brand" name="new_brand" type="text" placeholder="e.g. VinFast"></div>
+    <div class="field"><label class="f" for="name">Model name *</label><input id="name" name="name" type="text" value="<%= prefill %>" required placeholder="e.g. Sierra EV"><div class="hint">Only the model name, without the brand.</div></div>
+    <div class="field"><label class="f" for="status">Status</label><select id="status" name="status"><option>upcoming</option><option>new-launch</option><option>on-sale</option></select><div class="effect">upcoming = Upcoming cars page, new-launch = 'Just launched', on-sale = normal catalogue.</div></div>
+  </div>
+  <button class="btn lime">Create car</button>
+</form>
+<%- include("partials/foot") %>

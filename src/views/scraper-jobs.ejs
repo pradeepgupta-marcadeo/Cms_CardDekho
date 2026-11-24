@@ -1,0 +1,20 @@
+<%- include("partials/head", { title }) %>
+<h1>Jobs & logs</h1>
+<p class="sub">A record of every scraping run: when it ran, what started it (schedule, manual, retry) and what it found. Use "Retry" to run a failed job again.</p>
+<div class="card mt"><table>
+  <thead><tr><th>Source</th><th>Started</th><th>Trigger</th><th>Status</th><th>Result</th><th></th></tr></thead>
+  <tbody>
+  <% for (const j of jobs) { const s = j.stats || {}; %>
+    <tr>
+      <td><a href="/admin/scraper/jobs/<%= j.id %>"><%= j.source.name %></a><div class="muted"><%= j.type %></div></td>
+      <td class="nowrap"><%= new Date(j.createdAt).toLocaleString("en-IN") %></td>
+      <td><%= j.trigger %></td>
+      <td><span class="pill <%= j.status === 'succeeded' ? 'ok' : j.status === 'failed' ? 'bad' : 'warn' %>"><%= j.status %></span></td>
+      <td class="muted"><%= s.found ?? 0 %> found · <%= s.new ?? 0 %> new · <%= s.updated ?? 0 %> updated · <%= s.unchanged ?? 0 %> unchanged · <%= s.failed ?? 0 %> failed<% if (j.error) { %><div class="missing"><%= j.error.slice(0, 120) %></div><% } %></td>
+      <td class="right"><% if (j.status === "failed" || j.status === "cancelled") { %><form class="inline" method="post" action="/admin/scraper/jobs/<%= j.id %>/retry"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Retry</button></form><% } %></td>
+    </tr>
+  <% } %>
+  <% if (!jobs.length) { %><tr><td colspan="6" class="muted">No jobs yet.</td></tr><% } %>
+  </tbody>
+</table></div>
+<%- include("partials/foot") %>

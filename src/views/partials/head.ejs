@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="csrf" content="<%= csrf %>">
+  <title><%= title %> · Wheelora CMS</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/admin.css">
+  <script type="module" src="/static/admin.js"></script>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="CMS sections">
+    <a class="brand" href="/admin"><b>W</b> Wheelora <span>CMS</span></a>
+    <% for (const s of nav.sections) { %>
+      <a href="<%= s.href %>" class="<%= s.on ? 'on' : '' %>"><i><%= s.icon %></i><%= s.label %></a>
+    <% } %>
+  </nav>
+  <main class="main">
+    <div class="top" style="margin-bottom:8px">
+      <div></div>
+      <div class="userbar">
+        <a class="btn light small" href="<%= siteUrl %>" target="_blank" rel="noopener">View site ↗</a>
+        <a href="/admin/account" class="who"><span class="av"><%= user ? user.name.slice(0, 1).toUpperCase() : '' %></span><span><%= user ? user.name : '' %><small><%= user ? user.role : '' %></small></span></a>
+        <form class="inline" method="post" action="/admin/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Sign out</button></form>
+      </div>
+    </div>
+    <% if (nav.groups.length > 1) { %>
+      <nav class="tabs main-tabs" aria-label="<%= nav.current.label %> tabs">
+        <% for (const g of nav.groups) { %><a href="<%= g.href %>" class="<%= g.on ? 'on' : '' %>"><%= g.label %></a><% } %>
+      </nav>
+      <% const active = nav.groups.find((g) => g.on); if (active && active.items.length > 1) { %>
+        <nav class="pills" aria-label="<%= active.label %>"><% for (const it of active.items) { %><a href="<%= it.href %>" class="<%= it.on ? 'on' : '' %>"><%= it.label %></a><% } %></nav>
+      <% } %>
+    <% } %>
+    <% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.text %></div><% } %>

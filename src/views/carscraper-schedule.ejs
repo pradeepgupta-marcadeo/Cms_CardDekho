@@ -1,0 +1,54 @@
+<%- include("partials/head", { title }) %>
+<% const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"; %>
+<h1>Scraping schedule</h1>
+<p class="sub">Choose here which scrape runs by itself, and when (India time). The CMS must stay running. If another scrape is running at that time, this one runs once, as soon as that one finishes. The log of every run is shown in <a href="/admin/carscraper">CarScrapper</a>.</p>
+<% if (live) { %><p class="flash info mt">Run #<%= live.id %> is running now. <a href="/admin/carscraper/runs/<%= live.id %>">See the log →</a></p><% } %>
+
+<div class="card mt">
+  <h2>Saved schedules</h2>
+  <% if (!jobs.length) { %><p class="muted">No schedules yet. Add one below.</p><% } else { %>
+  <table><thead><tr><th>What</th><th>When</th><th>Options</th><th>Last run</th><th>Next run</th><th>Status</th><th></th></tr></thead><tbody>
+  <% for (const j of jobs) { const o = j.options || {}; %>
+    <tr>
+      <td><strong><%= MODES[j.mode] ? MODES[j.mode].label : j.mode %></strong></td>
+      <td><%= j.text %></td>
+      <td class="muted"><%= [o.refresh ? "refresh" : "only new", o.brand, o.city, o.limit && "max " + o.limit].filter(Boolean).join(" · ") %></td>
+      <td><%= when(j.last) %></td>
+      <td><%= j.enabled ? when(j.next) : "—" %></td>
+      <td><span class="pill <%= j.enabled ? 'ok' : 'warn' %>"><%= j.enabled ? "on" : "paused" %></span></td>
+      <td class="row-actions">
+        <form class="inline" method="post" action="/admin/carscraper/schedule/<%= j.id %>/run"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small" <%= live ? "disabled" : "" %>>Run now</button></form>
+        <form class="inline" method="post" action="/admin/carscraper/schedule/<%= j.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small"><%= j.enabled ? "Pause" : "Switch on" %></button></form>
+        <form class="inline" method="post" action="/admin/carscraper/schedule/<%= j.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger small" data-confirm="Delete this schedule?">Delete</button></form>
+      </td>
+    </tr>
+  <% } %>
+  </tbody></table>
+  <% } %>
+</div>
+
+<form class="card" method="post" action="/admin/carscraper/schedule">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>New schedule</h2>
+  <div class="grid g3">
+    <div class="field"><label class="f" for="mode">What to scrape</label>
+      <select id="mode" name="mode"><% for (const [k, m] of Object.entries(MODES)) { %><option value="<%= k %>"><%= m.label %></option><% } %></select></div>
+    <div class="field"><label class="f" for="freq">How often</label>
+      <select id="freq" name="freq" data-cs-freq><% for (const [k, label] of Object.entries(FREQS)) { %><option value="<%= k %>" <%= k === "daily" ? "selected" : "" %>><%= label %></option><% } %></select></div>
+    <div class="field" data-cs-when="daily weekly"><label class="f" for="time">Time (IST)</label><input id="time" name="time" type="text" value="03:00" placeholder="03:00"></div>
+    <div class="field" data-cs-when="weekly"><label class="f" for="weekday">Day</label>
+      <select id="weekday" name="weekday"><% WEEKDAYS.forEach((d, i) => { %><option value="<%= i %>" <%= i === 1 ? "selected" : "" %>><%= d %></option><% }) %></select></div>
+    <div class="field" data-cs-when="hourly"><label class="f" for="every">Every how many hours</label><input id="every" name="every" type="number" min="1" max="168" value="6"></div>
+    <div class="field"><label class="f" for="brand">Brand (optional)</label><input id="brand" name="brand" type="text" list="cs-brands" placeholder="all brands" autocomplete="off"></div>
+    <div class="field"><label class="f" for="city">City (optional)</label><input id="city" name="city" type="text" list="cs-cities" placeholder="all cities" autocomplete="off"><div class="hint">Only for "On-road prices by city" and "Fuel prices". Any spelling is fine.</div></div>
+    <datalist id="cs-brands"><% for (const b of brandNames) { %><option value="<%= b %>"><% } %></datalist>
+    <datalist id="cs-cities"><% for (const c of cityNames) { %><option value="<%= c %>"><% } %></datalist>
+    <div class="field"><label class="f" for="limit">Max (optional)</label><input id="limit" name="limit" type="number" min="1" max="5000" placeholder="all"></div>
+  </div>
+  <label class="check"><input type="checkbox" name="refresh" checked> Refresh (fetch saved cars again too, so price and spec updates come in)</label>
+  <p class="hint">With Refresh off, only new cars/variants come in (finishes quickly). Keep Refresh on to catch price updates.</p>
+  <p class="hint mt">📷 Car scrapes (Launched, Latest, Upcoming, Everything) bring new photos into the Media library by themselves.</p>
+  <button class="btn lime mt">Add schedule</button>
+  <p class="hint mt">Suggestion: "Launched cars" every day at 03:00 (Refresh), "Variants of launched cars" every Monday at 04:00 (Refresh), "Upcoming cars" every day at 05:00.</p>
+</form>
+<%- include("partials/foot") %>

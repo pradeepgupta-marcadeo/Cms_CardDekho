@@ -1,0 +1,18 @@
+<%- include("partials/head", { title }) %>
+<h1>Media library</h1>
+<p class="sub">Uploaded images. Each image is resized to 1600px and compressed to WebP automatically, so the website loads fast. Only upload images you have the right to use.</p>
+<form class="card mt toolbar" method="post" action="/admin/media/upload?_csrf=<%= csrf %>" enctype="multipart/form-data">
+  <input type="file" name="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" required>
+  <input type="text" name="alt" placeholder="Alt text: what the image shows" aria-label="Alt text" style="max-width:300px">
+  <input type="text" name="credit" placeholder="Credit" aria-label="Credit" style="max-width:200px">
+  <button class="btn lime" data-busy="Uploading…">Upload</button>
+</form>
+<div class="photos">
+  <% for (const m of list) { %>
+    <figure>
+      <img src="<%= m.url %>" alt="<%= m.alt %>" loading="lazy">
+      <figcaption><%= m.filename %><br><%= m.w %>×<%= m.h %> · <%= Math.round(m.bytes / 1024) %> KB<br><input type="text" value="<%= m.url %>" readonly aria-label="Image address" data-copy></figcaption>
+    </figure>
+  <% } %>
+</div>
+<%- include("partials/foot") %>

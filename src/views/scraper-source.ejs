@@ -1,0 +1,62 @@
+<%- include("partials/head", { title }) %>
+<p class="sub"><a href="/admin/scraper/sources">← Sources</a></p>
+<h1><%= isNew ? "Add source" : s.name %></h1>
+<form class="card mt" method="post" action="/admin/scraper/sources<%= isNew ? "" : "/" + s.id %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="grid g3">
+    <% if (isNew) { %><div class="field"><label class="f" for="key">Key</label><input id="key" name="key" type="text" required placeholder="e.g. tata-motors"><div class="hint">Lowercase letters and hyphens only. You cannot change it later.</div></div><% } %>
+    <div class="field"><label class="f" for="name">Name</label><input id="name" name="name" type="text" value="<%= s.name || '' %>" required></div>
+    <div class="field"><label class="f" for="baseUrl">Base URL</label><input id="baseUrl" name="baseUrl" type="text" value="<%= s.baseUrl || '' %>" required></div>
+    <div class="field"><label class="f" for="kind">Kind</label><select id="kind" name="kind"><% for (const k of ["api", "html", "browser", "rss"]) { %><option <%= s.kind === k ? "selected" : "" %>><%= k %></option><% } %></select><div class="hint">api = JSON, html = static page (Cheerio), browser = JavaScript page (Playwright), rss = feed.</div></div>
+    <div class="field"><label class="f" for="adapter">Adapter</label><select id="adapter" name="adapter"><% for (const a of ["licensed-provider", "wikipedia", "commons", "rss-news", "manufacturer"]) { %><option <%= s.adapter === a ? "selected" : "" %>><%= a %></option><% } %></select></div>
+    <div class="field"><label class="f" for="schedule">Schedule (cron)</label><input id="schedule" name="schedule" type="text" value="<%= s.schedule || '' %>" placeholder="0 6 * * 1"><div class="hint">Minute Hour Day Month Weekday, Indian time. Leave empty to run it by hand only. "0 6 * * 1" = every Monday at 6 AM.</div></div>
+    <div class="field"><label class="f" for="rateLimitMs">Gap between requests (ms)</label><input id="rateLimitMs" name="rateLimitMs" type="number" min="1000" value="<%= s.rateLimitMs %>"><div class="hint">At least 1000 ms. If the robots.txt Crawl-delay is longer, that is used instead.</div></div>
+    <div class="field"><label class="f" for="timeoutMs">Timeout (ms)</label><input id="timeoutMs" name="timeoutMs" type="number" min="1000" max="60000" value="<%= s.timeoutMs %>"></div>
+    <div class="field"><label class="f" for="concurrency">Parallel requests</label><input id="concurrency" name="concurrency" type="number" min="1" max="4" value="<%= s.concurrency %>"></div>
+  </div>
+  <div class="field"><label class="f" for="description">Description</label><input id="description" name="description" type="text" value="<%= s.description || '' %>"></div>
+  <label class="check"><input type="checkbox" name="enabled" <%= s.enabled ? "checked" : "" %>> Enabled (runs on schedule and from Run now)</label>
+  <div class="grid g3 mt">
+    <div class="field"><label class="f" for="config">Config (JSON)</label><textarea class="mono" id="config" name="config" data-json style="min-height:200px"><%= JSON.stringify(s.config || {}, null, 2) %></textarea><div class="hint">Adapter settings: feeds, pages, catalogue URL…</div></div>
+    <div class="field"><label class="f" for="selectors">Selectors (JSON)</label><textarea class="mono" id="selectors" name="selectors" data-json style="min-height:200px"><%= JSON.stringify(s.selectors || {}, null, 2) %></textarea><div class="hint">CSS selectors used by html/browser adapters. They are never hardcoded in the code.</div></div>
+    <div class="field"><label class="f" for="headers">Extra request headers (JSON)</label><textarea class="mono" id="headers" name="headers" data-json style="min-height:200px"><%= JSON.stringify(s.headers || {}, null, 2) %></textarea><div class="hint">For example, the key header for a licensed API. The honest bot User-Agent is sent automatically.</div></div>
+  </div>
+  <button class="btn lime"><%= isNew ? "Add source" : "Save source" %></button>
+</form>
+
+<% if (!isNew) { %>
+<div class="card" id="permissions">
+  <h2>Permissions</h2>
+  <p class="hint">This source sends a request only when that host and path have a permission here and robots.txt also allows it. Tick "Images" only if you have the right to reuse the images.</p>
+  <table><thead><tr><th>Host / path</th><th>Use</th><th>Basis</th><th>Evidence</th><th></th></tr></thead><tbody>
+    <% for (const p of s.permissions) { %>
+      <tr><td><%= p.hostname %><span class="muted"><%= p.pathPrefix %></span></td><td><%= p.allowData ? "data" : "" %> <%= p.allowImages ? "· images" : "" %></td><td><%= p.basis.replace(/_/g, " ") %><div class="muted"><%= p.licence %><%= p.expiresAt ? " · until " + new Date(p.expiresAt).toLocaleDateString("en-IN") : "" %></div></td><td class="muted"><%= p.evidence %></td>
+        <td><form class="inline" method="post" action="/admin/scraper/sources/<%= s.id %>/permissions/<%= p.id %>/delete" data-confirm="Remove this permission?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger small">Remove</button></form></td></tr>
+    <% } %>
+    <% if (!s.permissions.length) { %><tr><td colspan="5" class="missing">No permission recorded: this source cannot fetch anything.</td></tr><% } %>
+  </tbody></table>
+  <form method="post" action="/admin/scraper/sources/<%= s.id %>/permissions" class="mt">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="grid g4">
+      <div class="field"><label class="f" for="hostname">Host</label><input id="hostname" name="hostname" type="text" placeholder="www.example.com" required></div>
+      <div class="field"><label class="f" for="pathPrefix">Path prefix</label><input id="pathPrefix" name="pathPrefix" type="text" value="/"></div>
+      <div class="field"><label class="f" for="basis">Basis</label><select id="basis" name="basis"><option value="written_permission">written permission</option><option value="open_licence">open licence</option><option value="public_api_terms">public API / feed terms</option><option value="own_content">our own content</option></select></div>
+      <div class="field"><label class="f" for="licence">Licence</label><input id="licence" name="licence" type="text" placeholder="CC BY 4.0"></div>
+    </div>
+    <div class="field"><label class="f" for="evidence">Evidence</label><input id="evidence" name="evidence" type="text" required placeholder="Link to the terms / licence page, or reference of the permission email"><div class="hint">At least 10 characters. This is kept for audits.</div></div>
+    <div class="toolbar"><label class="check"><input type="checkbox" name="allowData" checked> Data</label><label class="check"><input type="checkbox" name="allowImages"> Images (reuse rights)</label><label>Expires <input type="date" name="expiresAt"></label><button class="btn light">Add permission</button></div>
+  </form>
+</div>
+
+<div class="card" id="test">
+  <h2>Test this source</h2>
+  <p class="hint">Dry run: reads a few items and checks them. Nothing is saved. It works on a disabled source too (a permission is still needed).</p>
+  <form method="post" action="/admin/scraper/sources/<%= s.id %>/test" data-busy="Testing…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light">Run test</button></form>
+  <% if (test) { %>
+    <p class="mt"><span class="pill <%= test.ok ? 'ok' : 'bad' %>"><%= test.ok ? "passed" : "failed" %></span> <%= test.requests ?? 0 %> requests <%= test.error ? "· " + test.error : "" %></p>
+    <table><tbody><% for (const i of test.items) { %><tr><td><%= i.entityType %></td><td><%= i.title %></td><td><span class="pill <%= i.valid ? 'ok' : 'bad' %>"><%= i.valid ? "valid" : "invalid" %></span> <span class="muted"><%= i.error || (i.missing.length ? "missing: " + i.missing.join(", ") : "") %></span></td></tr><% } %></tbody></table>
+    <% if (test.log.length) { %><div class="log mt"><%= test.log.join("\n") %></div><% } %>
+  <% } %>
+</div>
+<% } %>
+<%- include("partials/foot") %>

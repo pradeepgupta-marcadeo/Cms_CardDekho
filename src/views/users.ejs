@@ -1,0 +1,19 @@
+<%- include("partials/head", { title }) %>
+<h1>Users</h1>
+<p class="sub">An Admin can do everything (manage users, remove demo data). An Editor can change content.</p>
+<% if (error) { %><div class="errors mt"><%= error %></div><% } %>
+<div class="card mt"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last sign-in</th><th></th></tr></thead><tbody>
+<% for (const u of list) { %><tr><td><%= u.name %></td><td><%= u.email %></td><td><%= u.role %></td><td><%= u.last_login ? u.last_login.toLocaleString("en-IN") : "never" %></td><td class="right"><% if (u.id !== user.id) { %><form class="inline" method="post" action="/admin/users/<%= u.id %>/delete" data-confirm="Remove <%= u.email %>?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger small">Remove</button></form><% } %></td></tr><% } %>
+</tbody></table></div>
+<form class="card" method="post" action="/admin/users" style="max-width:560px">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Add a user</h2>
+  <div class="grid g2">
+    <div class="field"><label class="f" for="name">Name</label><input id="name" name="name" type="text" required></div>
+    <div class="field"><label class="f" for="email">Email</label><input id="email" name="email" type="email" required></div>
+    <div class="field"><label class="f" for="password">Password</label><input id="password" name="password" type="password" minlength="10" autocomplete="new-password" required></div>
+    <div class="field"><label class="f" for="role">Role</label><select id="role" name="role"><option>editor</option><option>admin</option></select></div>
+  </div>
+  <button class="btn lime">Add user</button>
+</form>
+<%- include("partials/foot") %>

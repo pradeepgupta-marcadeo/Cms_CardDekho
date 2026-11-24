@@ -1,0 +1,120 @@
+<%- include("partials/head", { title }) %>
+<%
+  const qs = (o) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ filter: filter === "all" ? "" : filter, q, body, brand, source, limit: per === 25 ? "" : per, sort: sort === "-popularity" ? "" : sort, ...o })) if (v) p.set(k, v); const s = p.toString(); return s ? `?${s}` : ""; };
+  const src = (u) => (!u ? "" : /^https?:/.test(u) || u.startsWith("/uploads") ? u : siteUrl + u);
+  const pages = Math.max(1, Math.ceil(matched / per));
+  const mark = (f) => (sort === f ? " ↑" : sort === `-${f}` ? " ↓" : " ⇅");
+  const flip = (f) => qs({ sort: sort === `-${f}` ? f : `-${f}`, page: "" });
+  const filtered = Boolean(q || body || brand || source);
+  const ago = (d) => { const days = Math.floor((Date.now() - new Date(d).getTime()) / 86400000); return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`; };
+%>
+<div class="top">
+  <div><h1>Cars</h1><p class="sub">Every car's page, prices, variants, photos and guide. The collector brings new data in; a car goes on the website once it has a photo, a price and variants.</p></div>
+  <div class="actions">
+    <a class="btn light" href="/admin/cars/new">+ Add a car</a>
+    <button type="button" class="btn lime" data-open="collector">▶ Run collector</button>
+  </div>
+</div>
+
+<div class="grid g4" style="margin-bottom:14px">
+  <a class="stat-box" href="/admin/cars"><span class="ib blue">🚗</span><span><small>Total cars</small><b><%= totals.total %></b></span></a>
+  <a class="stat-box" href="/admin/cars?filter=live"><span class="ib green">✓</span><span><small>On website</small><b><%= totals.live %></b></span></a>
+  <a class="stat-box" href="/admin/cars?filter=hidden"><span class="ib amber">📷</span><span><small>Need a photo</small><b><%= totals.nophoto %></b></span></a>
+  <a class="stat-box" href="/admin/scraper/cars?status=pending"><span class="ib blue">⏳</span><span><small>Collected, waiting</small><b><%= pending === null ? "–" : pending %></b></span></a>
+</div>
+
+<nav class="cat-tabs" aria-label="Show">
+  <% for (const [k, l] of [["all", "All"], ["live", "On website"], ["hidden", "Hidden / needs photo"], ["upcoming", "Upcoming"], ["nocopy", "No guide yet"]]) { %><a href="<%= qs({ filter: k === 'all' ? '' : k, page: '' }) || '/admin/cars' %>" class="<%= filter === k ? 'on' : '' %>"><%= l %></a><% } %>
+</nav>
+
+<div class="card">
+  <form method="get" action="/admin/cars" class="filters">
+    <% if (filter !== "all") { %><input type="hidden" name="filter" value="<%= filter %>"><% } %>
+    <% if (per !== 25) { %><input type="hidden" name="limit" value="<%= per %>"><% } %>
+    <input type="search" name="q" value="<%= q %>" placeholder="Search by brand or model…" aria-label="Search cars">
+    <select name="brand" aria-label="Brand"><option value="">All brands</option><% for (const b of brands) { %><option value="<%= b.slug %>" <%= brand === b.slug ? "selected" : "" %>><%= b.name %></option><% } %></select>
+    <select name="body" aria-label="Body type"><option value="">All body types</option><% for (const b of BODIES) { %><option <%= body === b ? "selected" : "" %>><%= b %></option><% } %></select>
+    <select name="source" aria-label="Data source"><option value="">All sources</option><option value="manual" <%= source === "manual" ? "selected" : "" %>>By hand</option><% for (const s of sources) { %><option <%= source === s ? "selected" : "" %>><%= s %></option><% } %></select>
+    <span class="grow"></span>
+    <button class="btn lime">▽ Apply</button>
+    <a class="btn light" href="<%= qs({}) || '/admin/cars' %>" title="Reload the list">↻ Refresh</a>
+  </form>
+  <div class="perpage">
+    <span class="muted"><b>Per page</b></span>
+    <% for (const n of [25, 50, 100, 200]) { %><a class="chip <%= per === n ? 'on' : '' %>" href="<%= qs({ limit: n === 25 ? '' : n, page: '' }) || '/admin/cars' %>"><%= n %></a><% } %>
+    <span class="grow"></span>
+    <span class="muted"><%= matched ? `${(page - 1) * per + 1}–${Math.min(matched, page * per)} of ${matched} cars` : "No cars" %></span>
+    <% if (filtered) { %><a class="btn light small" href="<%= filter !== 'all' ? '/admin/cars?filter=' + filter : '/admin/cars' %>">✕ Clear</a><% } %>
+  </div>
+  <form id="bulk" method="post" action="/admin/cars/bulk" class="bulkbar" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <b data-selected>0 selected</b>
+    <button class="btn light small" name="action" value="show">Show on website</button>
+    <button class="btn light small" name="action" value="hide">Hide</button>
+  </form>
+</div>
+
+<div class="card flush">
+  <div class="scroll-x">
+  <table class="mgr">
+    <thead><tr>
+      <th class="w10"><input type="checkbox" data-all aria-label="Select all on this page"></th>
+      <th class="w64">Image</th>
+      <th><a href="<%= flip('name') %>">Car<%= mark("name") %></a></th>
+      <th>Status</th>
+      <th><a href="<%= flip('price') %>">Price (lakh)<%= mark("price") %></a></th>
+      <th>Variants</th>
+      <th><a href="<%= flip('photos') %>">Photos<%= mark("photos") %></a></th>
+      <th>Source</th>
+      <th><a href="<%= flip('updated') %>">Updated<%= mark("updated") %></a></th>
+      <th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+      <% for (const c of list) { const live = c.published && c.photos > 0; %>
+        <tr>
+          <td><input type="checkbox" name="ids" value="<%= c.id %>" form="bulk" data-row aria-label="Select <%= c.brand %> <%= c.name %>"></td>
+          <td><% if (c.thumb) { %><img class="thumb" src="<%= src(c.thumb) %>" alt="" loading="lazy" width="64" height="44"><% } else { %><span class="thumb none">none</span><% } %></td>
+          <td class="titlecell"><a class="ttl" href="/admin/cars/<%= c.id %>"><%= c.brand %> <%= c.name %></a><span class="kw"><%= c.status %></span><% if (c.copy) { %><span class="kw high">guide ✓</span><% } else { %><span class="kw">no guide</span><% } %></td>
+          <td><span class="state <%= live ? 'ok' : 'warn' %>"><i></i><%= live ? "On website" : c.photos ? "Hidden" : "Needs photo" %></span></td>
+          <td class="nowrap"><%= c.min_price ? `${c.min_price} – ${c.max_price}` : "—" %></td>
+          <td><a href="/admin/cars/<%= c.id %>/variants"><%= c.variants %></a></td>
+          <td><a href="/admin/cars/<%= c.id %>/photos"><%= c.photos %></a></td>
+          <td><% if (c.source && c.source.name) { %><span class="srcchip"><%= c.source.name %></span><% } else { %><span class="muted">By hand</span><% } %></td>
+          <td class="nowrap muted"><%= ago(c.updated_at) %></td>
+          <td class="nowrap right">
+            <% if (live) { %><a class="ico" title="View on website" aria-label="View <%= c.name %> on the website" href="<%= siteUrl %>/cars/<%= c.brand_slug %>/<%= c.slug %>" target="_blank" rel="noopener">👁</a><% } %>
+            <form class="inline" method="post" action="/admin/cars/<%= c.id %>/visibility"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="ico <%= c.published ? 'amber' : 'green' %>" title="<%= c.published ? 'Hide from the website' : 'Show on the website' %>" aria-label="<%= c.published ? 'Hide' : 'Show' %> <%= c.name %>"><%= c.published ? "↩" : "✓" %></button></form>
+            <a class="ico" title="Photos" aria-label="Photos of <%= c.name %>" href="/admin/cars/<%= c.id %>/photos">📷</a>
+            <a class="ico" title="Edit" aria-label="Edit <%= c.name %>" href="/admin/cars/<%= c.id %>">✎</a>
+          </td>
+        </tr>
+      <% } %>
+      <% if (!list.length) { %><tr><td colspan="10" class="empty"><b>No cars match</b><br><span class="muted">Clear the filters, or press <b>Run collector</b> to bring cars in.</span></td></tr><% } %>
+    </tbody>
+  </table>
+  </div>
+  <% if (pages > 1) { %>
+    <div class="pager" style="padding:12px 16px;border-top:1px solid var(--line);margin:0">
+      <span class="muted">Page <%= page %> of <%= pages %></span><span class="grow"></span>
+      <% if (page > 1) { %><a class="btn light small" href="<%= qs({ page: page - 1 }) %>">← Previous</a><% } %>
+      <% if (page < pages) { %><a class="btn light small" href="<%= qs({ page: page + 1 }) %>">Next →</a><% } %>
+    </div>
+  <% } %>
+</div>
+
+<dialog id="collector" class="modal" aria-labelledby="collector-title" data-endpoint="/admin/cars/collect">
+  <div class="mhead"><div><h2 id="collector-title">Car collector</h2><p class="muted">Collects car data, imports it, finds free photos, puts finished cars on the website and writes guides.</p></div><button type="button" class="btn light" data-close>Close</button></div>
+  <div class="mform">
+    <label class="grow"><span>Collect first</span><select data-f="collect"><option value="1">Ask the data sources for new data</option><option value="0">Use what is already collected</option></select></label>
+    <label class="w110"><span>Photo search</span><input type="number" min="0" max="60" value="15" data-f="photoCars" title="How many cars without a photo to search for"></label>
+    <label class="w110"><span>Photos / car</span><input type="number" min="1" max="40" value="12" data-f="photosPerCar" title="Up to this many real photos per car, spread over angles and colours"></label>
+    <label class="w110"><span>Guides</span><input type="number" min="0" max="25" value="3" data-f="aiOverviews" title="How many buying guides the AI writes"></label>
+    <button type="button" class="btn lime" data-run>Run collector</button>
+    <button type="button" class="btn red" data-stop hidden>Stop</button>
+  </div>
+  <% if (!ai) { %><p class="mnote err">No AI key is set, so guides will be skipped. Photos and data still work.</p><% } %>
+  <div class="mlog" data-log aria-live="polite"><p class="muted" data-empty>Press Run. New cars stay hidden until they have a photo, a price and variants. Names, web addresses, guides and SEO of existing cars are never overwritten.</p></div>
+  <div class="mdone" data-done hidden>Finished. The list behind this window has been refreshed.</div>
+</dialog>
+<script type="module" src="/static/news-manager.js"></script>
+<%- include("partials/foot") %>

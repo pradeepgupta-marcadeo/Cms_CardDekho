@@ -1,0 +1,24 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div><h1>Analytics</h1><p class="sub">The website's own (cookie-free) analytics: which pages were viewed and which buttons were clicked. For full detail, connect Google Analytics 4 and Search Console in Settings.</p></div>
+  <div class="actions"><% for (const d of [7, 30, 90]) { %><a class="btn <%= d === days ? '' : 'light' %> small" href="?days=<%= d %>"><%= d %> days</a><% } %></div>
+</div>
+<div class="grid g3">
+  <div class="card"><div class="stat"><%= totals.views %><small>page views</small></div></div>
+  <div class="card"><div class="stat"><%= totals.visitors %><small>visitors (daily unique)</small></div></div>
+  <div class="card"><div class="stat"><%= totals.clicks %><small>tracked clicks</small></div></div>
+</div>
+<div class="card">
+  <h2>Page views per day</h2>
+  <% const max = Math.max(1, ...daily.map((d) => d.views)); %>
+  <div class="bars" role="img" aria-label="Page views per day"><% for (const d of daily) { %><span style="height:<%= Math.round((d.views / max) * 100) %>%" title="<%= d.day %>: <%= d.views %>"></span><% } %></div>
+  <% if (!daily.length) { %><p class="muted">No visits recorded yet. Open the website in a browser to see data here.</p><% } %>
+</div>
+<div class="grid g2">
+  <div class="card"><h2>Top pages</h2><table><thead><tr><th>Page</th><th class="right">Views</th><th class="right">Visitors</th></tr></thead><tbody><% for (const p of pages) { %><tr><td><a href="<%= siteUrl %><%= p.path %>" target="_blank" rel="noopener"><%= p.path %></a></td><td class="right"><%= p.views %></td><td class="right"><%= p.visitors %></td></tr><% } %></tbody></table></div>
+  <div class="card"><h2>Top clicks</h2><p class="hint">Buttons like offer, compare, 360° view, lead form and shortlist.</p><table><thead><tr><th>Button</th><th class="right">Clicks</th><th class="right">On pages</th></tr></thead><tbody><% for (const c of clicks) { %><tr><td><%= c.target %></td><td class="right"><%= c.n %></td><td class="right"><%= c.pages %></td></tr><% } %></tbody></table></div>
+  <div class="card"><h2>Where visitors come from</h2><table><tbody><% for (const r of refs) { %><tr><td><%= r.referrer %></td><td class="right"><%= r.n %></td></tr><% } %></tbody></table></div>
+  <div class="card"><h2>Devices</h2><table><tbody><% for (const d of devices) { %><tr><td><%= d.device %></td><td class="right"><%= d.n %></td></tr><% } %></tbody></table>
+    <p class="hint mt">GA4: <%= settings.ga4Id ? settings.ga4Id : "not connected" %> · Clarity: <%= settings.clarityId ? settings.clarityId : "not connected" %> · Search Console: <%= settings.gscVerification ? "verification code set" : "not connected" %></p></div>
+</div>
+<%- include("partials/foot") %>

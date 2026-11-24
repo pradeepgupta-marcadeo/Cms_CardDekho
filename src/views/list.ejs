@@ -1,0 +1,33 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div>
+    <h1><%= def.title %></h1>
+    <p class="sub"><%= def.intro %></p>
+  </div>
+  <div class="actions">
+    <% if (!def.noCreate) { %><a class="btn lime" href="/admin/r/<%= name %>/new">+ Add <%= def.singular %></a><% } %>
+  </div>
+</div>
+<div class="card">
+  <form class="toolbar" method="get">
+    <input type="search" name="q" value="<%= q %>" placeholder="Search <%= def.title.toLowerCase() %>…" aria-label="Search">
+    <button class="btn light">Search</button>
+    <span class="muted"><%= total %> total</span>
+  </form>
+  <div class="scroll-x"><table>
+    <thead><tr><% for (const c of def.columns) { %><th><%= (def.fields.find((f) => f.name === c) || {}).label || c.replace(/_/g, " ") %></th><% } %><th></th></tr></thead>
+    <tbody>
+      <% for (const r of list) { %>
+        <tr>
+          <% for (const [i, c] of def.columns.entries()) { let v = r[c]; if (Array.isArray(v)) v = v.join(", "); if (v instanceof Date) v = v.toISOString().slice(0, 10); if (typeof v === "boolean") v = v ? "Yes" : "—"; if (typeof v === "string" && v.length > 90) v = v.slice(0, 90) + "…"; %>
+            <td><% if (i === 0) { %><a href="/admin/r/<%= name %>/<%= encodeURIComponent(r[pk]) %>"><%= v ?? "—" %></a><% } else { %><%= v ?? "—" %><% } %><% if (i === 0 && r.is_demo) { %> <span class="pill warn">demo</span><% } %></td>
+          <% } %>
+          <td class="right nowrap"><% if (def.preview) { %><a href="<%= siteUrl %><%= def.preview(r) %>" target="_blank" rel="noopener">View ↗</a><% } %></td>
+        </tr>
+      <% } %>
+      <% if (!list.length) { %><tr><td colspan="<%= def.columns.length + 1 %>" class="muted">Nothing here yet.</td></tr><% } %>
+    </tbody>
+  </table></div>
+  <%- include("partials/pager", { page, pages, link: (n) => `?page=${n}&q=${encodeURIComponent(q)}` }) %>
+</div>
+<%- include("partials/foot") %>

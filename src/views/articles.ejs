@@ -1,0 +1,143 @@
+<%- include("partials/head", { title }) %>
+<%
+  const qs = (o) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ kind, status, q, source, category, limit: per === 25 ? "" : per, from, to, dateField: dateField === "created_at" ? "" : dateField, sort: sort === "-created_at" ? "" : sort, ...o })) if (v) p.set(k, v); const s = p.toString(); return s ? `?${s}` : ""; };
+  const src = (u) => (!u ? "" : /^https?:/.test(u) || u.startsWith("/uploads") ? u : siteUrl + u);
+  const pages = Math.max(1, Math.ceil(matched / per));
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const short = (d) => { if (!d) return "—"; const x = new Date(d); return Number.isNaN(x.getTime()) ? "—" : `${String(x.getDate()).padStart(2, "0")} ${MON[x.getMonth()]} ${x.getFullYear()}`; };
+  const stamp = (d) => { if (!d) return "—"; const x = new Date(d); return `${short(d)}, ${String(x.getHours()).padStart(2, "0")}:${String(x.getMinutes()).padStart(2, "0")}`; };
+  const mark = (f) => (sort === f ? " ↑" : sort === `-${f}` ? " ↓" : " ⇅");
+  const flip = (f) => qs({ sort: sort === `-${f}` ? f : `-${f}`, page: "" });
+  const filtered = Boolean(q || status || source || category || from || to);
+%>
+<div class="top">
+  <div><h1>News Manager</h1><p class="sub">Manage, review and publish car news, reviews and guides. Stories arrive from the scraper; you read them here and publish.</p></div>
+  <div class="actions">
+    <button type="button" class="btn red" data-open="delete-date">🗓 Delete by date</button>
+    <button type="button" class="btn lime" data-open="scraper">▶ Run scraper</button>
+  </div>
+</div>
+
+<nav class="cat-tabs" aria-label="Section">
+  <a href="/admin/articles" class="<%= !kind ? 'on' : '' %>">All</a>
+  <% for (const [k, l] of Object.entries(KINDS)) { %><a href="/admin/articles?kind=<%= k %>" class="<%= kind === k ? 'on' : '' %>"><%= l %></a><% } %>
+</nav>
+
+<div class="stats3">
+  <div class="stat-box"><span class="ib blue">📄</span><span><small>Total</small><b><%= totals.total %></b></span></div>
+  <a class="stat-box" href="<%= qs({ status: 'published', page: '' }) %>"><span class="ib green">✓</span><span><small>Published</small><b><%= totals.published %></b></span></a>
+  <a class="stat-box" href="<%= qs({ status: 'draft', page: '' }) %>"><span class="ib amber">⏳</span><span><small>Pending</small><b><%= totals.drafts %></b></span></a>
+</div>
+
+<div class="card">
+  <form method="get" action="/admin/articles" class="filters">
+    <% if (kind) { %><input type="hidden" name="kind" value="<%= kind %>"><% } %>
+    <% if (per !== 25) { %><input type="hidden" name="limit" value="<%= per %>"><% } %>
+    <input type="search" name="q" value="<%= q %>" placeholder="Search title or summary…" aria-label="Search">
+    <select name="status" aria-label="Status"><option value="">All status</option><option value="draft" <%= status === "draft" ? "selected" : "" %>>Pending</option><option value="published" <%= status === "published" ? "selected" : "" %>>Published</option></select>
+    <select name="source" aria-label="Source"><option value="">All sources</option><option value="__hand" <%= source === "__hand" ? "selected" : "" %>>By hand</option><% for (const s of sources) { %><option value="<%= s %>" <%= source === s ? "selected" : "" %>><%= s %></option><% } %></select>
+    <select name="category" aria-label="Category"><option value="">All categories</option><% for (const c of categories) { %><option value="<%= c.category %>" <%= category === c.category ? "selected" : "" %>><%= c.category %> (<%= c.n %>)</option><% } %></select>
+    <select name="dateField" aria-label="Which date the range applies to"><option value="created_at" <%= dateField === "created_at" ? "selected" : "" %>>Created at</option><option value="published_on" <%= dateField === "published_on" ? "selected" : "" %>>Published at</option><option value="updated_at" <%= dateField === "updated_at" ? "selected" : "" %>>Updated at</option></select>
+    <label class="inl"><span>From</span><input type="date" name="from" value="<%= from %>"></label>
+    <label class="inl"><span>To</span><input type="date" name="to" value="<%= to %>"></label>
+    <span class="grow"></span>
+    <button class="btn lime">▽ Apply</button>
+    <a class="btn light" href="<%= qs({}) || '/admin/articles' %>" title="Reload the list">↻ Refresh</a>
+  </form>
+  <div class="perpage">
+    <span class="muted"><b>Per page</b></span>
+    <% for (const n of [25, 50, 100, 200]) { %><a class="chip <%= per === n ? 'on' : '' %>" href="<%= qs({ limit: n === 25 ? '' : n, page: '' }) || '/admin/articles' %>"><%= n %></a><% } %>
+    <span class="grow"></span>
+    <span class="muted"><%= matched ? `${(page - 1) * per + 1}–${Math.min(matched, page * per)} of ${matched} articles` : "No articles" %></span>
+    <% if (filtered) { %><a class="btn light small" href="<%= kind ? '/admin/articles?kind=' + kind : '/admin/articles' %>">✕ Clear</a><% } %>
+  </div>
+  <form id="bulk" method="post" action="/admin/articles/bulk" class="bulkbar" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <b data-selected>0 selected</b>
+    <button class="btn light small" name="action" value="publish">Publish</button>
+    <button class="btn light small" name="action" value="draft">Move to pending</button>
+    <button class="btn red small" name="action" value="delete" data-confirm="Delete the selected articles? This cannot be undone.">Delete</button>
+  </form>
+</div>
+
+<div class="card flush">
+  <div class="scroll-x">
+  <table class="mgr">
+    <thead><tr>
+      <th class="w10"><input type="checkbox" data-all aria-label="Select all on this page"></th>
+      <th class="w64">Image</th>
+      <th><a href="<%= flip('title') %>">Title<%= mark("title") %></a></th>
+      <th>Source</th>
+      <th><a href="<%= flip('created_at') %>">Created<%= mark("created_at") %></a></th>
+      <th><a href="<%= flip('published_on') %>">Published<%= mark("published_on") %></a></th>
+      <th><a href="<%= flip('updated_at') %>">Updated<%= mark("updated_at") %></a></th>
+      <th>Status</th>
+      <th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+      <% for (const a of list) { %>
+        <tr>
+          <td><input type="checkbox" name="ids" value="<%= a.id %>" form="bulk" data-row aria-label="Select <%= a.title %>"></td>
+          <td><% if (a.thumb) { %><img class="thumb" src="<%= src(a.thumb) %>" alt="" loading="lazy" width="64" height="44"><% } else { %><span class="thumb none">none</span><% } %></td>
+          <td class="titlecell">
+            <a class="ttl" href="/admin/articles/<%= a.id %>"><%= a.title %></a>
+            <% if (a.excerpt) { %><div class="muted one"><%= a.excerpt %></div><% } %>
+            <span class="kw"><%= KINDS[a.kind] %></span><% if (a.category && a.category !== "news") { %><span class="kw"><%= a.category %></span><% } %><% if (a.car) { %><span class="kw"><%= a.car %></span><% } %><% if (a.ai_generated) { %><span class="kw high" title="First draft written by the scraper">✨ scraper</span><% } %><% if (a.is_demo) { %><span class="kw">demo</span><% } %>
+          </td>
+          <td><% if (a.source && a.source.name) { %><% if (a.source.url) { %><a class="srcchip" href="<%= a.source.url %>" target="_blank" rel="noopener" title="Open the story this was drafted from"><%= a.source.name %></a><% } else { %><span class="srcchip"><%= a.source.name %></span><% } %><% } else { %><span class="muted">By hand</span><% } %></td>
+          <td class="nowrap muted"><%= stamp(a.created_at) %></td>
+          <td class="nowrap muted"><%= a.status === "published" ? short(a.published_on) : "—" %></td>
+          <td class="nowrap muted"><%= short(a.updated_at) %></td>
+          <td>
+            <form class="inline" method="post" action="/admin/articles/<%= a.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="state <%= a.status === 'published' ? 'ok' : 'warn' %>" title="Click to change"><i></i><%= a.status === "published" ? "Published" : "Pending" %></button></form>
+            <% if (a.seo && a.seo.score) { %><div class="hint">SEO <%= a.seo.score %>%</div><% } %>
+          </td>
+          <td class="nowrap right">
+            <a class="ico" title="Preview" aria-label="Preview <%= a.title %>" href="/admin/articles/<%= a.id %>/view">👁</a>
+            <form class="inline" method="post" action="/admin/articles/<%= a.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="ico <%= a.status === 'published' ? 'amber' : 'green' %>" title="<%= a.status === 'published' ? 'Move back to pending' : 'Publish' %>" aria-label="<%= a.status === 'published' ? 'Move back to pending' : 'Publish' %> <%= a.title %>"><%= a.status === "published" ? "↩" : "✓" %></button></form>
+            <a class="ico" title="Edit" aria-label="Edit <%= a.title %>" href="/admin/articles/<%= a.id %>">✎</a>
+            <form class="inline" method="post" action="/admin/articles/<%= a.id %>/delete" data-confirm="Delete “<%= a.title %>”? This cannot be undone."><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="ico del" title="Delete" aria-label="Delete <%= a.title %>">🗑</button></form>
+          </td>
+        </tr>
+      <% } %>
+      <% if (!list.length) { %><tr><td colspan="9" class="empty"><b>Nothing here yet</b><br><span class="muted">Press <b>Run scraper</b> above to bring stories in.</span></td></tr><% } %>
+    </tbody>
+  </table>
+  </div>
+  <% if (pages > 1) { %>
+    <div class="pager" style="padding:12px 16px;border-top:1px solid var(--line);margin:0">
+      <span class="muted">Page <%= page %> of <%= pages %></span><span class="grow"></span>
+      <% if (page > 1) { %><a class="btn light small" href="<%= qs({ page: page - 1 }) %>">← Previous</a><% } %>
+      <% if (page < pages) { %><a class="btn light small" href="<%= qs({ page: page + 1 }) %>">Next →</a><% } %>
+    </div>
+  <% } %>
+</div>
+
+<%# ---- Run scraper ---- %>
+<dialog id="scraper" class="modal" aria-labelledby="scraper-title" data-endpoint="/admin/articles/scrape">
+  <div class="mhead"><div><h2 id="scraper-title">News scraper</h2><p class="muted">Reads the car-news feeds, then writes an original draft from the facts in each story.</p></div><button type="button" class="btn light" data-close>Close</button></div>
+  <div class="mform">
+    <label class="grow"><span>Category</span><select data-f="category"><% for (const [k, l] of Object.entries(scrapeCategories)) { %><option value="<%= k %>"><%= l %></option><% } %></select></label>
+    <label class="w110"><span>Last hours</span><input type="number" min="1" max="168" value="24" data-f="hours"></label>
+    <label class="w110"><span>Max articles</span><input type="number" min="1" max="25" value="10" data-f="limit"></label>
+    <button type="button" class="btn lime" data-run>Run scraper</button>
+    <button type="button" class="btn red" data-stop hidden>Stop</button>
+  </div>
+  <% if (!ai) { %><p class="mnote err">No AI key is set, so the scraper cannot write. Add GEMINI_API_KEY to <code>cms_cardekho/.env</code> and restart.</p><% } %>
+  <div class="mlog" data-log aria-live="polite"><p class="muted" data-empty>Press Run. Every article is saved as <b>Pending</b> for you to read before it goes live.</p></div>
+  <div class="mdone" data-done hidden>Finished. The new drafts are in the list behind this window.</div>
+</dialog>
+
+<%# ---- Delete by date ---- %>
+<dialog id="delete-date" class="modal narrow" aria-labelledby="dd-title">
+  <div class="mhead"><div><h2 id="dd-title">Delete by date</h2><p class="muted">Clear a range of articles in one go. Nothing is deleted until you confirm the count.</p></div><button type="button" class="btn light" data-close>Close</button></div>
+  <div class="mbody">
+    <label><span>Which date</span><select data-f="dateField"><option value="created_at">Created at</option><option value="published_on">Published at</option><option value="updated_at">Updated at</option></select></label>
+    <div class="two"><label><span>From</span><input type="date" data-f="from"></label><label><span>To</span><input type="date" data-f="to"></label></div>
+    <label><span>Which articles</span><select data-f="scope"><option value="draft">Pending only (safe)</option><option value="all">Pending and published</option></select></label>
+    <p class="mnote" data-msg>Choose the dates, then press Check.</p>
+    <div class="mbtns"><button type="button" class="btn light" data-check>Check</button><button type="button" class="btn red" data-confirm-delete disabled>Delete</button></div>
+  </div>
+</dialog>
+<script type="module" src="/static/news-manager.js"></script>
+<%- include("partials/foot") %>

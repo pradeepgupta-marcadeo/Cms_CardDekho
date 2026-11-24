@@ -1,0 +1,85 @@
+<%- include("partials/head", { title }) %>
+<% const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—";
+   const rs = (n) => n ? "₹" + Number(n).toLocaleString("en-IN") : "—";
+   const done = photos.filter((p) => p.status === "done" && p.url);
+   const failed = photos.filter((p) => p.status === "failed");
+   const facts = [["Price", car.price_range], ["Ex-showroom", car.ex_showroom_min ? rs(car.ex_showroom_min) + (car.ex_showroom_max && car.ex_showroom_max !== car.ex_showroom_min ? " – " + rs(car.ex_showroom_max) : "") : null], ["Expected launch", car.expected_launch], ["Body", car.body_type], ["Fuel", car.fuel], ["Gearbox", car.transmission], ["Seats", car.seats], ["Airbags", car.airbags], ["Mileage", car.mileage], ["Range", car.range_km && car.range_km + (/\d$/.test(car.range_km) ? " km" : "")], ["Battery", car.battery && car.battery + (/\d$/.test(car.battery) ? " kWh" : "")], ["EMI from", d.emi_per_month ? rs(d.emi_per_month) + "/month" : null], ["City for prices", d.city]].filter(([, v]) => v !== null && v !== undefined && v !== "");
+   const groups = (obj) => Object.entries(obj || {}).filter(([, items]) => items && Object.keys(items).length); %>
+<p class="sub"><a href="/admin/carscraper/cars">← Saved cars</a></p>
+<div class="top">
+  <div>
+    <h1><%= car.name %> <span class="pill <%= car.kind === 'launched' ? 'ok' : 'warn' %>"><%= car.kind %></span></h1>
+    <p class="sub"><code><%= car.slug %></code> · scraped <%= when(car.scraped_at) %> · saved <%= when(car.updated_at) %><% if (car.url) { %> · <a href="<%= car.url %>" target="_blank" rel="noopener noreferrer">source page ↗</a><% } %></p>
+  </div>
+</div>
+
+<div class="grid g2 mt">
+  <div class="card">
+    <h2>Basics</h2>
+    <table><tbody><% for (const [k, v] of facts) { %><tr><th><%= k %></th><td><%= v %></td></tr><% } %></tbody></table>
+    <% if (d.on_road_price_sample) { const o = d.on_road_price_sample; %><p class="hint mt">On-road sample (<%= o.variant %>): ex-showroom ₹<%= o.ex_showroom %> + RTO ₹<%= o.rto %> + insurance ₹<%= o.insurance %> = ₹<%= o.on_road %></p><% } %>
+  </div>
+  <div class="card">
+    <h2>About</h2>
+    <% if (car.latest_update) { %><h3>Latest update</h3><p><%= car.latest_update %></p><% } %>
+    <% if (car.description) { %><h3>Description</h3><p><%= car.description %></p><% } %>
+    <% if ((d.colours || []).length) { %><h3>Colours (<%= d.colours.length %>)</h3><p><% for (const c of d.colours) { %><span class="kw"><% if (c.hex) { %><i class="cs-swatch" style="background:<%= /^#[0-9a-f]{3,8}$/i.test(c.hex) ? c.hex : 'transparent' %>"></i><% } %><%= c.name %></span><% } %></p><% } %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Photos in the Media library (<%= done.length %>)</h2>
+  <% if (!done.length) { %><p class="muted">No photos imported yet. On <a href="/admin/carscraper">CarScrapper</a>, run "Import photos" (Brand: <code><%= car.slug.split("/")[0] %></code>). This car has <%= (d.pictures || []).length %> pictures and <%= (d.colours || []).length %> colour photos.</p><% } else { %>
+  <div class="cs-photos"><% for (const p of done) { %>
+    <figure><a href="<%= p.url %>" target="_blank" rel="noopener"><img src="<%= p.url %>" alt="<%= car.name %> <%= p.title %>" loading="lazy" width="240" height="160"></a><figcaption><%= p.kind === "colour" ? "Colour: " : "" %><%= p.title %> · <%= p.w %>×<%= p.h %> · <%= Math.round(p.bytes / 1024) %> KB</figcaption></figure>
+  <% } %></div>
+  <p class="hint">Credit: CarDekho. The copyright belongs to CarDekho / the manufacturer. Check the rights before you use them on the website.</p>
+  <% } %>
+  <% if (failed.length) { %><p class="hint"><%= failed.length %> photo(s) did not download (<%= failed[0].error %>). They will be tried again the next time you run "Import photos".</p><% } %>
+</div>
+
+<div class="card flush">
+  <h2 class="cs-pad">Variants (<%= variants.length %>)</h2>
+  <% if (!variants.length) { %><p class="muted cs-pad">Variants are not saved yet. Run the "Variants of <%= car.kind === 'launched' ? 'launched' : 'upcoming' %> cars" scrape.</p><% } else { %>
+  <table><thead><tr><th>Variant</th><th>Fuel · Gearbox</th><th>Ex-showroom</th><th>On-road</th><th>Engine / Battery</th><th>Power</th><th>Mileage / Range</th><th></th></tr></thead><tbody>
+  <% for (const v of variants) { %>
+    <tr>
+      <td><strong><%= v.variant %></strong><% if (v.tag) { %> <span class="pill"><%= v.tag %></span><% } %></td>
+      <td class="muted"><%= [v.fuel, v.transmission].filter(Boolean).join(" · ") %></td>
+      <td><%= v.price_text || rs(v.ex_showroom) %></td>
+      <td><%= rs(v.on_road) %></td>
+      <td><%= v.engine_cc || v.battery || "—" %></td>
+      <td><%= v.max_power || "—" %></td>
+      <td><%= v.mileage || v.range_km || "—" %></td>
+      <td><a class="btn light small" href="?variant=<%= v.id %>#v<%= v.id %>"><%= open === v.id ? "Open" : "Specs" %></a></td>
+    </tr>
+    <% if (open === v.id) { const vd = v.data || {}; const pb = vd.price_breakup; %>
+      <tr id="v<%= v.id %>"><td colspan="8" class="cs-variant">
+        <% if (pb) { %><p><strong>On-road (<%= vd.city %>):</strong> ex-showroom ₹<%= pb.ex_showroom %> · RTO ₹<%= pb.rto %> · insurance ₹<%= pb.insurance %><% for (const o of pb.other_charges || []) { %> · <%= o.name %> ₹<%= o.price %><% } %> = <strong>₹<%= pb.on_road %></strong><% if (pb.emi) { %> · EMI ₹<%= pb.emi %>/month<% } %></p><% } %>
+        <div class="grid g2">
+          <% for (const [label, obj] of [["Specification", vd.specification], ["Features", vd.features]]) { %>
+            <div><h3><%= label %></h3><% for (const [sec, items] of groups(obj)) { %><details><summary><%= sec %> (<%= Object.keys(items).length %>)</summary><table><tbody><% for (const [k, val] of Object.entries(items)) { %><tr><td><%= k %></td><td><%= val %></td></tr><% } %></tbody></table></details><% } %></div>
+          <% } %>
+        </div>
+      </td></tr>
+    <% } %>
+  <% } %>
+  </tbody></table>
+  <% } %>
+</div>
+
+<div class="grid g2">
+  <% for (const [label, obj] of [["Specification (model)", d.specification], ["Features (model)", d.features]]) { %>
+    <div class="card"><h2><%= label %></h2>
+      <% const gs = groups(obj); if (!gs.length) { %><p class="muted">Not given on the page.</p><% } %>
+      <% for (const [sec, items] of gs) { %><details><summary><%= sec %> (<%= Object.keys(items).length %>)</summary><table><tbody><% for (const [k, val] of Object.entries(items)) { %><tr><td><%= k %></td><td><%= val %></td></tr><% } %></tbody></table></details><% } %>
+    </div>
+  <% } %>
+</div>
+
+<% if ((d.expert_review || []).length) { %>
+  <div class="card"><h2>Expert review (source text)</h2>
+    <% for (const r of d.expert_review) { %><details><summary><%= r.title %></summary><p><%= r.text %></p></details><% } %>
+  </div>
+<% } %>
+<%- include("partials/foot") %>

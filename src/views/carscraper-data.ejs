@@ -1,0 +1,26 @@
+<%- include("partials/head", { title }) %>
+<% const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"; const mb = (n) => (n / 1048576).toFixed(1) + " MB"; %>
+<h1>Scraped data</h1>
+<p class="sub">All the scraper data is in <code><%= dataDir %></code>. Each file has a report: for each field, how many records have it empty. Empty usually means the CarDekho page does not have that item at all (like the battery of a petrol car).</p>
+<% for (const f of files) { %>
+  <div class="card mt">
+    <div class="top">
+      <div>
+        <h2><%= f.label %> <span class="pill <%= f.missing ? 'warn' : 'ok' %>"><%= f.missing ? "not yet" : f.count.toLocaleString("en-IN") + " records" %></span></h2>
+        <% if (!f.missing) { %><p class="hint"><code><%= f.file %></code> · <%= mb(f.size) %> · updated <%= when(f.mtime) %></p><% } %>
+      </div>
+      <% if (!f.missing) { %><div class="actions">
+        <% if (f.csvExists) { %><a class="btn light small" href="/admin/carscraper/data/<%= f.csv %>">CSV download</a><% } %>
+        <a class="btn light small" href="/admin/carscraper/data/<%= f.file %>">JSONL download</a>
+      </div><% } %>
+    </div>
+    <% if (f.quality.length) { %>
+      <table><thead><tr><th>Field</th><th>Empty</th><th>Records it applies to</th><th>Filled</th><th>Examples (empty)</th></tr></thead><tbody>
+      <% for (const q of f.quality) { const pct = q.of ? Math.round(100 * (q.of - q.missing) / q.of) : 100; %>
+        <tr><td><code><%= q.field %></code></td><td><%= q.missing %></td><td><%= q.of %></td><td><span class="pill <%= pct === 100 ? 'ok' : pct >= 80 ? 'warn' : 'bad' %>"><%= pct %>%</span></td><td class="muted"><%= q.examples.slice(0, 4).join(", ") %></td></tr>
+      <% } %>
+      </tbody></table>
+    <% } else if (!f.missing) { %><p class="muted">No report yet. It appears after a run.</p><% } %>
+  </div>
+<% } %>
+<%- include("partials/foot") %>

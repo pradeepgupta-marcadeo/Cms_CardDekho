@@ -1,0 +1,29 @@
+-- Authors, the rich-text body, separate listing and cover images, tags and SEO controls for articles.
+CREATE TABLE IF NOT EXISTS authors (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  designation TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  bio TEXT NOT NULL DEFAULT '',
+  image TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE articles
+  ADD COLUMN IF NOT EXISTS author_id INT REFERENCES authors(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS body_html TEXT,
+  ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS image_title TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS cover_src TEXT,
+  ADD COLUMN IF NOT EXISTS cover_w INT,
+  ADD COLUMN IF NOT EXISTS cover_h INT,
+  ADD COLUMN IF NOT EXISTS cover_alt TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS cover_title TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS og_src TEXT,
+  ADD COLUMN IF NOT EXISTS canonical_url TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS no_index BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_breaking BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS articles_author_idx ON articles (author_id);

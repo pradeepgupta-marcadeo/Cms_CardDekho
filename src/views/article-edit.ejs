@@ -1,0 +1,130 @@
+<%- include("partials/head", { title }) %>
+<%
+  const noun = a.kind === "review" ? "Expert review" : a.kind === "advice" ? "Tips article" : "News article";
+  const origin = siteUrl.replace(/\/$/, "");
+  const slugPath = a.kind === "review" ? "expert-reviews" : a.kind === "advice" ? "tips-advice" : "news";
+%>
+<link rel="stylesheet" href="/static/vendor/ckeditor5/ckeditor5.css">
+<div class="card bar" data-article-bar>
+  <a class="btn light" href="/admin/articles">← Back</a>
+  <h1 class="bartitle"><%= isNew ? `New ${noun}` : `Edit ${noun}` %></h1>
+  <span class="grow"></span>
+  <% if (!isNew) { %><form class="inline" method="post" action="/admin/articles/<%= a.id %>/ai-seo" data-busy="AI is writing the snippet…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">✨ AI: rewrite SEO title & description</button></form><% } %>
+  <label class="switch" title="Published articles are live on the website">
+    <span data-sw-draft>Draft</span>
+    <input type="checkbox" data-publish-switch <%= a.status === "published" ? "checked" : "" %> aria-label="Published">
+    <i aria-hidden="true"></i>
+    <span data-sw-pub>Published</span>
+  </label>
+  <div class="seg" role="tablist"><button type="button" class="on" data-pane-btn="content">Content</button><button type="button" data-pane-btn="seo">SEO</button></div>
+</div>
+<% if (!isNew && a.status === "published") { %><p class="muted">Live on the website: <a href="<%= siteUrl %><%= path %>" target="_blank" rel="noopener"><%= siteUrl %><%= path %> ↗</a></p><% } %>
+<% if (a.seo && a.seo.ai) { %><p class="muted">First draft written by AI (<%= a.seo.ai %>). Read it and check the facts before you publish.</p><% } %>
+<% if (a.source && a.source.url) { %><div class="notice">Based on a report by <a href="<%= a.source.url %>" target="_blank" rel="noopener"><%= a.source.name %></a>. The AI restated the facts in its own words; check them against the source before publishing.</div><% } %>
+
+<form method="post" action="/admin/articles/<%= isNew ? "new" : a.id %>" data-seo-form data-article-form>
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+  <div data-pane="content" class="stack">
+    <section class="card">
+      <div class="grid g2">
+        <div class="field" style="grid-column:1/-1"><label class="f" for="title">Title <b class="req">*</b></label><input id="title" name="title" type="text" value="<%= a.title %>" required data-seo="h1" placeholder="Enter the article title"></div>
+        <div class="field"><label class="f" for="author_id">Author</label>
+          <select id="author_id" name="author_id"><option value="">Picked automatically (<%= authors.some((x) => x.active) ? "an active author" : "Wheelora Desk" %>)</option><% for (const x of authors) { %><option value="<%= x.id %>" <%= x.id === a.author_id ? "selected" : "" %>><%= x.name %><%= x.active ? "" : " (inactive)" %></option><% } %></select>
+          <div class="hint"><a href="/admin/authors">Manage authors ↗</a></div></div>
+        <div class="field"><label class="f" for="minutes">Read time (minutes)</label><input id="minutes" name="minutes" type="number" min="1" value="<%= isNew ? '' : a.minutes %>" placeholder="Calculated automatically if blank"></div>
+        <div class="field"><label class="f" for="published_on">Date</label><input id="published_on" name="published_on" type="date" value="<%= String(a.published_on).slice(0, 10) %>"><div class="hint">A future date publishes it that day.</div></div>
+        <div class="field"><label class="f" for="category">Category</label>
+          <div class="inline-row"><select id="category" name="category" data-category><% for (const c of categories) { %><option value="<%= c %>" <%= c === a.category ? "selected" : "" %>><%= c %></option><% } %></select><button type="button" class="btn light" data-new-category>+ New</button></div></div>
+        <div class="field"><label class="f" for="kind">Section</label><select id="kind" name="kind"><% for (const [k, l] of Object.entries(KINDS)) { %><option value="<%= k %>" <%= k === a.kind ? "selected" : "" %>><%= l %></option><% } %></select><div class="hint">News → /news/…, Review → /expert-reviews/…, Tips → /tips-advice/…</div></div>
+        <div class="field"><label class="f" for="status">Status</label><select id="status" name="status" data-status><option value="draft" <%= a.status === "draft" ? "selected" : "" %>>Draft (hidden)</option><option value="published" <%= a.status === "published" ? "selected" : "" %>>Published (live)</option></select></div>
+        <div class="field" style="grid-column:1/-1"><label class="f" for="slug">URL slug</label><input id="slug" name="slug" type="text" value="<%= a.slug %>" placeholder="Generated from the title if left blank"><div class="hint">After publishing, changing it adds a redirect from the old address.</div></div>
+        <div class="field" style="grid-column:1/-1"><label class="f" for="excerpt">Summary</label><textarea id="excerpt" name="excerpt"><%= a.excerpt %></textarea><div class="hint">Shown on cards. Google uses it when the meta description is empty.</div></div>
+        <div style="grid-column:1/-1" class="checks-row">
+          <label class="check"><input type="checkbox" name="is_featured" <%= a.is_featured ? "checked" : "" %>> Feature on the home page</label>
+          <label class="check"><input type="checkbox" name="is_breaking" <%= a.is_breaking ? "checked" : "" %>> Mark as breaking</label>
+        </div>
+      </div>
+    </section>
+
+    <%- include("partials/image-card", { prefix: "image", label: "Listing image", hint: "Used on cards across the home page, listings and search.", aspect: "16 / 9", withAlt: true, withCredit: true, a, specs: [["Recommended", "1200 × 675 px"], ["Aspect ratio", "16:9"], ["Formats", "JPG · PNG · WebP"], ["Max size", "6 MB"]], tips: ["Keep the main subject centred.", "Avoid placing text near the edges.", "Works best with landscape images."] }) %>
+    <%- include("partials/image-card", { prefix: "cover", label: "Detail banner", hint: "The wide hero image at the top of the article page itself. Without one, the listing image is used.", aspect: "10 / 3", withAlt: true, withCredit: false, a, specs: [["Recommended", "1600 × 480 px"], ["Aspect ratio", "10:3"], ["Formats", "JPG · PNG · WebP"], ["Max size", "6 MB"]], tips: ["Keep important content in the centre 60–70%.", "Leave safe padding on the left and right.", "Avoid placing titles or logos near the edges."] }) %>
+
+    <section class="card">
+      <div class="top" style="margin:0 0 6px"><h3 class="cap" style="margin:0">Tags</h3></div>
+      <div class="tagbox" data-tags>
+        <input type="hidden" name="tags" value="<%= (a.tags || []).join(',') %>" data-tags-value>
+        <span data-chips></span>
+        <input type="text" class="taginput" placeholder="Type a tag and press Enter" aria-label="Add a tag" data-tag-input>
+      </div>
+      <p class="hint">Type a tag and press Enter. They group related stories and help search.</p>
+    </section>
+
+    <section class="card">
+      <h3 class="cap">Related cars</h3>
+      <div class="grid g3">
+        <div class="field"><label class="f" for="car_id">Main car</label><select id="car_id" name="car_id"><option value="">—</option><% for (const c of cars) { %><option value="<%= c.id %>" <%= c.id === a.car_id ? "selected" : "" %>><%= c.label %></option><% } %></select><div class="hint">The article shows up on this car's News tab.</div></div>
+        <div class="field"><label class="f" for="rival_id">Rival car (optional)</label><select id="rival_id" name="rival_id"><option value="">—</option><% for (const c of cars) { %><option value="<%= c.id %>" <%= c.id === a.rival_id ? "selected" : "" %>><%= c.label %></option><% } %></select></div>
+        <div class="field"><label class="f" for="photo_car_id">Fallback photo from car</label><select id="photo_car_id" name="photo_car_id"><option value="">Same as main car</option><% for (const c of cars) { %><option value="<%= c.id %>" <%= c.id === a.photo_car_id && a.photo_car_id !== a.car_id ? "selected" : "" %>><%= c.label %></option><% } %></select><div class="hint">Used only when the article has no listing image.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 class="cap">Content <b class="req">*</b></h3>
+      <textarea name="body_html" id="body_html" data-seo="html" data-editor hidden><%= html %></textarea>
+      <div class="rte-wrap" data-editor-host><p class="muted">Loading the editor…</p></div>
+      <h3 class="mt">FAQs</h3>
+      <textarea class="tall" name="faqs" aria-label="FAQs" style="min-height:160px"><%= text.faqs %></textarea>
+      <div class="hint">"Q: question" then "A: answer", a blank line between FAQs. They become FAQ markup for Google.</div>
+    </section>
+  </div>
+
+  <div data-pane="seo" hidden>
+    <div class="layout-2">
+      <div class="stack">
+        <section class="card" id="seo">
+          <h3 class="cap">Search engine listing</h3>
+          <div class="field"><label class="f" for="seo_title">SEO title</label><input id="seo_title" name="seo_title" type="text" value="<%= (a.seo && a.seo.title) || '' %>" data-seo="title" data-count placeholder="<%= a.title || 'Falls back to the title' %>"><div class="hint">30–60 characters with the main keyword, a little different from the title.</div></div>
+          <div class="field"><label class="f" for="seo_description">Meta description</label><textarea id="seo_description" name="seo_description" data-seo="description" data-count placeholder="Shown under the title in search results"><%= (a.seo && a.seo.description) || '' %></textarea><div class="hint">120–160 characters; give a reason to click.</div></div>
+          <div class="grid g2">
+            <div class="field"><label class="f" for="keywords">Keywords (main keyword on the first line)</label><textarea id="keywords" name="keywords" data-seo="keywords"><%= (a.keywords || []).join("\n") %></textarea><div class="hint">The SEO score is checked against these.</div></div>
+            <div class="field"><label class="f" for="canonical_url">Canonical URL</label><input id="canonical_url" name="canonical_url" type="url" value="<%= a.canonical_url || '' %>" placeholder="Only when the same content lives elsewhere"><label class="check" style="margin-top:12px"><input type="checkbox" name="no_index" <%= a.no_index ? "checked" : "" %>> Hide this article from search engines</label></div>
+          </div>
+          <div class="grid g2">
+            <div class="field"><label class="f" for="source_name">Source name</label><input id="source_name" name="source_name" type="text" value="<%= (a.source && a.source.name) || '' %>"></div>
+            <div class="field"><label class="f" for="source_url">Source link</label><input id="source_url" name="source_url" type="text" value="<%= (a.source && a.source.url) || '' %>"><div class="hint">Shown as "Source" under the article.</div></div>
+          </div>
+          <div class="gpreview">
+            <p class="muted cap">Search preview</p>
+            <p class="gurl"><%= origin %>/<%= slugPath %>/<span data-prev-slug><%= a.slug || "article-slug" %></span></p>
+            <p class="gtitle" data-prev-title><%= (a.seo && a.seo.title) || a.title || "Article title" %></p>
+            <p class="gdesc" data-prev-desc><%= (a.seo && a.seo.description) || a.excerpt || "Add a meta description to control this line." %></p>
+          </div>
+        </section>
+        <%- include("partials/image-card", { prefix: "og", label: "Social share image", hint: "Shown when the article is shared on WhatsApp, X or LinkedIn. Falls back to the detail banner.", aspect: "1200 / 630", withAlt: false, withCredit: false, a, specs: [["Recommended", "1200 × 630 px"], ["Aspect ratio", "1.91:1"], ["Formats", "JPG · PNG · WebP"], ["Max size", "6 MB"]], tips: [] }) %>
+      </div>
+      <aside class="seo-box">
+        <div class="card">
+          <h2>SEO score</h2>
+          <div class="score" data-seo-score><%= seo.score %>%</div>
+          <div class="muted" data-seo-words><%= seo.words %> words</div>
+          <ul class="checks" data-seo-checks>
+            <% for (const c of seo.checks) { %><li class="<%= c.ok ? 'ok' : '' %>"><%= c.label %><% if (!c.ok) { %><div class="hint"><%= c.hint %></div><% } %></li><% } %>
+          </ul>
+          <p class="hint mt">Updates as you type. 80%+ is good. The checks follow <code>WEBSITE_GUARDRAILS.md</code>.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="savebar">
+    <button class="btn lime"><%= isNew ? `Create ${noun.toLowerCase()}` : "Save changes" %></button>
+    <a class="btn light" href="/admin/articles">Cancel</a>
+    <span class="grow"></span>
+    <% if (!isNew) { %><button class="btn danger" formaction="/admin/articles/<%= a.id %>/delete" formnovalidate data-confirm="Delete this article? This cannot be undone.">Delete</button><% } %>
+  </div>
+</form>
+<script src="/static/vendor/ckeditor5/ckeditor5.umd.js"></script>
+<script type="module" src="/static/article-form.js"></script>
+<script type="module" src="/static/article-editor.js"></script>
+<%- include("partials/foot") %>

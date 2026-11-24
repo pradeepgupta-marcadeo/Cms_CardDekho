@@ -1,0 +1,55 @@
+<%- include("partials/head", { title }) %>
+<h1>Settings</h1>
+<form method="post" action="/admin/settings" class="mt">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Website identity</h2>
+      <div class="field"><label class="f" for="name">Site name</label><input id="name" name="name" type="text" value="<%= site.name || '' %>"><div class="effect">Logo text, at the end of every title, the footer and schema.</div></div>
+      <div class="field"><label class="f" for="tagline">Tagline</label><input id="tagline" name="tagline" type="text" value="<%= site.tagline || '' %>"><div class="effect">Home page title and description.</div></div>
+      <div class="field"><label class="f" for="phone">Phone</label><input id="phone" name="phone" type="text" value="<%= site.phone || '' %>"><div class="effect">Contact page and footer.</div></div>
+      <div class="field"><label class="f" for="email">Email</label><input id="email" name="email" type="text" value="<%= site.email || '' %>"><div class="effect">Contact page.</div></div>
+    </div>
+    <div class="card">
+      <h2>Analytics & search engines</h2>
+      <p class="hint">As soon as you add the IDs, the code is added to the website automatically (after the page loads, so it does not slow the site down).</p>
+      <div class="field"><label class="f" for="ga4Id">Google Analytics 4 measurement ID</label><input id="ga4Id" name="ga4Id" type="text" value="<%= analytics.ga4Id || '' %>" placeholder="G-XXXXXXXXXX"><div class="hint">analytics.google.com → Admin → Data streams → Web → Measurement ID.</div><div class="effect">Visitors, clicks and conversions in GA4.</div></div>
+      <div class="field"><label class="f" for="clarityId">Microsoft Clarity project ID</label><input id="clarityId" name="clarityId" type="text" value="<%= analytics.clarityId || '' %>"><div class="hint">Free heatmaps and session recordings: clarity.microsoft.com.</div></div>
+      <div class="field"><label class="f" for="gscVerification">Google Search Console verification code</label><input id="gscVerification" name="gscVerification" type="text" value="<%= analytics.gscVerification || '' %>"><div class="hint">Search Console → Add property → HTML tag → only the code inside content="...".</div><div class="effect">Adds a verification meta tag to the home page. Then submit the sitemap: /sitemap.xml</div></div>
+      <div class="field"><label class="f" for="bingVerification">Bing Webmaster verification code</label><input id="bingVerification" name="bingVerification" type="text" value="<%= analytics.bingVerification || '' %>"></div>
+      <label class="check"><input type="checkbox" name="firstParty" <%= analytics.firstParty !== false ? "checked" : "" %>> Built-in analytics (no cookies)</label>
+      <div class="effect">Page views and clicks (offer, compare, 360° view, lead buttons) for the CMS Analytics page.</div>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h2>AI news drafts</h2>
+      <label class="check"><input type="checkbox" name="autoDraft" <%= autoDraft.enabled ? "checked" : "" %>> Run the news scraper automatically, twice a day (about 2 am and 6 pm IST)</label>
+      <div class="field mt"><label class="f" for="perRun">Articles per run</label><input id="perRun" name="perRun" type="number" min="1" max="10" value="<%= autoDraft.perRun || 5 %>"><div class="hint">This many new articles are written in each run (launches first). It is the same process as the "Run scraper" button on the News page.</div></div>
+      <label class="check mt"><input type="checkbox" name="autoPublish" <%= autoDraft.publish ? "checked" : "" %>> Publish them automatically when they pass the length check</label>
+      <div class="hint">If this is off, every article first goes to "Pending" and you publish it with one click.</div>
+      <h3 class="mt">Car collector (automatic, daily)</h3>
+      <label class="check"><input type="checkbox" name="autoCars" <%= autoCars.enabled ? "checked" : "" %>> Every day: approve and import collected car data, find free photos, show finished cars, write guides</label>
+      <div class="grid g2 mt">
+        <div class="field"><label class="f" for="carPhotos">Cars to find photos for, per run</label><input id="carPhotos" name="carPhotos" type="number" min="0" max="60" value="<%= autoCars.photoCars ?? 15 %>"></div>
+        <div class="field"><label class="f" for="carGuides">AI buying guides, per run</label><input id="carGuides" name="carGuides" type="number" min="0" max="25" value="<%= autoCars.aiOverviews ?? 3 %>"></div>
+      </div>
+      <label class="check"><input type="checkbox" name="carConfirm" <%= autoCars.confirmUpdates !== false ? "checked" : "" %>> Apply updates to existing cars automatically (prices, variants, specs only; names, links, guides and SEO are never touched)</label>
+      <h3 class="mt">AI providers</h3>
+      <table><tbody><% for (const p of ai) { %><tr><td><%= p.name %></td><td><%= p.model %></td><td><span class="pill <%= p.configured ? 'ok' : 'warn' %>"><%= p.configured ? "key set" : "no key" %></span></td></tr><% } %></tbody></table>
+      <p class="hint">Keys and order are in <code>.env</code> (AI_PROVIDER_ORDER). Restart the CMS after changing them.</p>
+    </div>
+    <div class="card">
+      <h2>News sources</h2>
+      <p class="hint">Each source: <code>{"name": "...", "url": "RSS feed URL", "enabled": true}</code>. <code>"url": "gdelt"</code> = GDELT news search.</p>
+      <textarea class="tall mono" name="sources" aria-label="News sources JSON" data-json><%= JSON.stringify(sources, null, 2) %></textarea>
+    </div>
+  </div>
+  <button class="btn lime">Save settings</button>
+</form>
+<div class="card mt">
+  <h2>System</h2>
+  <p>Website: <a href="<%= config.siteUrl %>" target="_blank" rel="noopener"><%= config.siteUrl %></a> · refresh secret <%= config.revalidate ? "set" : "missing" %> · scheduler <%= config.schedulerEnabled ? "on" : "off" %> · Open Charge Map key <%= config.ocm ? "set" : "not set" %></p>
+  <p class="muted">Last scheduled runs: news <%= scheduler.news ? new Date(scheduler.news).toLocaleString("en-IN") : "never" %> · fuel prices <%= scheduler.ppac ? new Date(scheduler.ppac).toLocaleString("en-IN") : "never" %> · car data <%= scheduler.variantwise ? new Date(scheduler.variantwise).toLocaleString("en-IN") : "never" %></p>
+</div>
+<%- include("partials/foot") %>

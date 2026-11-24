@@ -1,0 +1,23 @@
+<%- include("partials/head", { title }) %>
+<%- include("partials/car-tabs", { car, tab: "variants" }) %>
+<div class="layout-2">
+  <form class="card" method="post" action="/admin/cars/<%= car.id %>/variants">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <h2>Variants (one per line)</h2>
+    <p class="hint">Format: <code>Name | Fuel | Manual or Automatic | Price in lakh | highlight; highlight</code>. Fuel: Petrol, Diesel, CNG, Electric or Hybrid.</p>
+    <textarea class="tall" name="text" aria-label="Variants"><%= text %></textarea>
+    <div class="effect">The Variants tab, each variant's own page, the Price tab table and the on-road price calculator. The starting and top price are also updated from these.</div>
+    <button class="btn lime mt">Save variants</button>
+  </form>
+  <aside class="card">
+    <h2>Where this comes from</h2>
+    <% if (car.source && car.source.name) { %>
+      <p>Imported from <strong><%= car.source.name %></strong> (<%= car.source.license %>), data as of <%= car.source.asOf %>.</p>
+      <p class="hint">The import runs again every Monday and replaces this list with real data. If you make changes by hand, the next import may overwrite them.</p>
+    <% } else { %>
+      <p class="muted">Entered by hand. Import from 'Import free data' to get real variants and prices.</p>
+    <% } %>
+    <p><%= list.length %> variants, Rs <%= list.length ? Math.min(...list.map((v) => v.price)) : 0 %>–<%= list.length ? Math.max(...list.map((v) => v.price)) : 0 %> lakh.</p>
+  </aside>
+</div>
+<%- include("partials/foot") %>

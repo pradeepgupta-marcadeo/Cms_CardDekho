@@ -1,0 +1,17 @@
+<%- include("partials/head", { title }) %>
+<% const s = job.stats || {}; %>
+<p class="sub"><a href="/admin/scraper/jobs">← Jobs & logs</a></p>
+<div class="top">
+  <div><h1><%= job.source.name %></h1>
+    <p class="sub"><%= job.type %> run · <%= job.trigger %> · started <%= new Date(job.createdAt).toLocaleString("en-IN") %> · <span class="pill <%= job.status === 'succeeded' ? 'ok' : job.status === 'failed' ? 'bad' : 'warn' %>" data-scrape-status="<%= job.id %>"><%= job.status %></span></p>
+    <p><strong><%= s.found ?? 0 %></strong> found · <strong><%= s.new ?? 0 %></strong> new · <strong><%= s.updated ?? 0 %></strong> updated · <%= s.unchanged ?? 0 %> unchanged · <%= s.failed ?? 0 %> failed · <%= s.requests ?? 0 %> requests</p>
+    <% if (job.error) { %><div class="errors"><%= job.error %></div><% } %>
+  </div>
+  <div class="actions">
+    <% if (job.status === "running" || job.status === "queued") { %><form class="inline" method="post" action="/admin/scraper/jobs/<%= job.id %>/cancel"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger">Cancel</button></form><% } %>
+    <% if (job.status === "failed" || job.status === "cancelled") { %><form class="inline" method="post" action="/admin/scraper/jobs/<%= job.id %>/retry"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime">Retry</button></form><% } %>
+    <a class="btn light" href="/admin/scraper/cars?status=pending">Review new records</a>
+  </div>
+</div>
+<div class="log mt" data-scrape-log="<%= job.id %>"><%= job.logs.map((l) => `${new Date(l.createdAt).toLocaleTimeString("en-IN", { hour12: false })}  ${l.level.toUpperCase().padEnd(5)} ${l.message}`).join("\n") || "Waiting to start…" %></div>
+<%- include("partials/foot") %>

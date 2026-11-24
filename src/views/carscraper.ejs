@@ -1,0 +1,82 @@
+<%- include("partials/head", { title }) %>
+<% const pill = (s) => s === "done" ? "ok" : s === "failed" ? "bad" : "warn"; const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"; %>
+<h1>CarScrapper</h1>
+<p class="sub">Press a button. The scraper runs in the background and its log shows live here: which car came in, what is new (NEW), what changed (UPDATED, old → new) and what stayed the same (SAME). At the end of each scrape, the data is saved in the CMS database (<a href="/admin/carscraper/cars">Saved cars</a>). Only one job runs at a time. Nothing goes to the website by itself.</p>
+<% if (db) { %>
+  <p class="mt"><strong>CMS database:</strong> <%= db.launched %> launched · <%= db.upcoming %> upcoming cars · <%= db.variants.toLocaleString("en-IN") %> variants · <%= db.photos.toLocaleString("en-IN") %> photos<% if (db.last_saved) { %> · last saved <%= when(db.last_saved) %><% } %> · <a href="/admin/carscraper/cars">See saved cars →</a></p>
+<% } else { %>
+  <div class="flash err mt">The CMS database tables are not created yet. Run <code>npm run migrate</code> in <code>cms_cardekho</code>, then restart the CMS.</div>
+<% } %>
+
+<% if (!scriptFound) { %>
+  <div class="flash err mt">scrape.py not found: <code><%= script %></code>. Fix <code>CARSCRAPER_SCRIPT</code> in <code>.env</code> and restart the CMS.</div>
+<% } %>
+
+<% if (live && liveRun) { const s = liveRun.summary || {}; %>
+  <div class="card mt cs-live">
+    <div class="top">
+      <div>
+        <h2>Running now: <%= s.label %> <span class="pill warn" data-cs-status="<%= liveRun.id %>">running</span></h2>
+        <p class="hint">Run #<%= liveRun.id %> · <%= s.by %> · started <%= when(liveRun.started_at) %></p>
+      </div>
+      <div class="actions">
+        <a class="btn light" href="/admin/carscraper/runs/<%= liveRun.id %>">See the full run →</a>
+        <form class="inline" method="post" action="/admin/carscraper/stop"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger" data-confirm="Stop the scrape? Data saved so far will be kept.">Stop</button></form>
+      </div>
+    </div>
+    <progress class="cs-progress" data-cs-progress max="<%= s.total || 1 %>" value="<%= s.done || 0 %>"></progress>
+    <p class="hint" data-cs-progress-text>Step <%= s.step %>/<%= s.steps %> · <%= s.done %> / <%= s.total %></p>
+    <div class="log" data-cs-log="<%= liveRun.id %>"><%= liveRun.log || "Starting…" %></div>
+  </div>
+<% } %>
+
+<div class="cs-stats mt">
+  <% for (const f of files) { %>
+    <a class="stat-box" href="/admin/carscraper/data"><div><small><%= f.label %></small><b><%= f.missing ? "—" : f.count.toLocaleString("en-IN") %></b><small><%= f.missing ? "not yet" : "updated " + when(f.mtime) %></small></div></a>
+  <% } %>
+</div>
+
+<h2 class="mt">What do you want to scrape?</h2>
+<div class="grid g3">
+  <datalist id="cs-brands"><% for (const b of brandNames) { %><option value="<%= b %>"><% } %></datalist>
+  <datalist id="cs-cities"><% for (const c of cityNames) { %><option value="<%= c %>"><% } %></datalist>
+  <% for (const [key, m] of Object.entries(MODES)) { const isPhotos = key === "photos"; const needsDb = !db;
+       const showBrand = !m.noBrand && !m.simple && key !== "save_db"; const showCity = Boolean(m.cityAware); const showMax = !m.simple && !["save_db", "website"].includes(key);
+       const maxLabel = key === "fuel" ? "Max new cities" : key === "city_prices" ? "Max pages" : isPhotos ? "Max cars" : "Max"; %>
+    <form class="card cs-mode" method="post" action="/admin/carscraper/run">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="mode" value="<%= key %>">
+      <h3><%= m.label %></h3>
+      <p><%= m.what %></p>
+      <p class="hint">Time: <%= m.time %></p>
+      <% if (!m.noScrape && !m.simple) { %><label class="check"><input type="checkbox" name="refresh"> Refresh (fetch what is saved again too, for price/spec updates)</label><% } %>
+      <% if (showBrand || showCity || showMax) { %><div class="cs-opts">
+        <% if (showCity) { %><div class="field"><label class="f" for="city-<%= key %>">City (optional)</label><input id="city-<%= key %>" name="city" type="text" list="cs-cities" placeholder="all cities" autocomplete="off"><div class="hint">Any spelling is fine: chandigarh, BENGALURU, gurugram. For more than one city, use commas. A new city is added to the website by itself.</div></div><% } %>
+        <% if (showBrand) { %><div class="field"><label class="f" for="brand-<%= key %>">Brand (optional)</label><input id="brand-<%= key %>" name="brand" type="text" list="cs-brands" placeholder="all brands" autocomplete="off"></div><% } %>
+        <% if (showMax) { %><div class="field"><label class="f" for="limit-<%= key %>"><%= maxLabel %> (optional)</label><input id="limit-<%= key %>" name="limit" type="number" min="1" max="5000" placeholder="all"></div><% } %>
+      </div><% } %>
+      <% if (m.steps.some((s) => s.photos) && !m.noScrape) { %><p class="hint">📷 New photos go into the Media library by themselves.</p><% } %>
+      <button class="btn lime mt" <%= live || (!scriptFound && !m.noScrape) || needsDb ? "disabled" : "" %>><%= live ? "A job is already running" : (m.noScrape ? "" : "Run ") + m.label %></button>
+    </form>
+  <% } %>
+</div>
+
+<div class="card mt">
+  <h2>Past runs</h2>
+  <% if (!runs.length) { %><p class="muted">No runs yet.</p><% } else { %>
+  <table><thead><tr><th>#</th><th>What</th><th>By</th><th>Status</th><th>Result</th><th>Started</th><th>Finished</th></tr></thead><tbody>
+  <% for (const r of runs) { const s = r.summary || {}; const c = s.counts || {}; %>
+    <tr>
+      <td><a href="/admin/carscraper/runs/<%= r.id %>"><%= r.id %></a></td>
+      <td><%= s.label || r.kind %><% if (s.options && (s.options.refresh || s.options.brand || s.options.limit)) { %><div class="hint"><%= [s.options.refresh && "refresh", s.options.brand, s.options.limit && "max " + s.options.limit].filter(Boolean).join(" · ") %></div><% } %></td>
+      <td class="muted"><%= s.by %></td>
+      <td><span class="pill <%= pill(r.status) %>"><%= r.status %></span></td>
+      <td><%= c.NEW ?? 0 %> new · <%= c.UPDATED ?? 0 %> updated · <%= c.SAME ?? 0 %> same<% if (c.skipped) { %> · <%= c.skipped %> skipped<% } %></td>
+      <td><%= when(r.started_at) %></td>
+      <td><%= when(r.finished_at) %></td>
+    </tr>
+  <% } %>
+  </tbody></table>
+  <% } %>
+</div>
+<%- include("partials/foot") %>

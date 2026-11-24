@@ -1,0 +1,41 @@
+<%- include("partials/head", { title }) %>
+<% const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"; const link = (p) => "/admin/carscraper/cars?" + new URLSearchParams({ q, kind, brand, page: String(p) }).toString(); %>
+<h1>Saved cars</h1>
+<p class="sub">CarDekho data saved in the CMS database (tables <code>cardekho_cars</code>, <code>cardekho_variants</code>, <code>cardekho_photos</code>). It is not shown on the website. Click a car to see its photos, all variants, specs and features.</p>
+
+<div class="cs-stats mt">
+  <div class="stat-box"><div><small>Launched cars</small><b><%= counts.launched %></b></div></div>
+  <div class="stat-box"><div><small>Upcoming cars</small><b><%= counts.upcoming %></b></div></div>
+  <div class="stat-box"><div><small>Variants</small><b><%= counts.variants.toLocaleString("en-IN") %></b></div></div>
+  <div class="stat-box"><div><small>Photos in Media library</small><b><%= counts.photos.toLocaleString("en-IN") %></b><% if (counts.photos_failed) { %><small><%= counts.photos_failed %> failed</small><% } %></div></div>
+</div>
+
+<form class="card mt cs-filter" method="get" action="/admin/carscraper/cars">
+  <div class="field"><label class="f" for="q">Search</label><input id="q" name="q" type="search" value="<%= q %>" placeholder="punch, creta, tata/…"></div>
+  <div class="field"><label class="f" for="kind">Type</label><select id="kind" name="kind"><option value="">All</option><option value="launched" <%= kind === "launched" ? "selected" : "" %>>Launched</option><option value="upcoming" <%= kind === "upcoming" ? "selected" : "" %>>Upcoming</option></select></div>
+  <div class="field"><label class="f" for="brand">Brand</label><select id="brand" name="brand"><option value="">All brands</option><% for (const b of brands) { %><option value="<%= b.brand %>" <%= b.brand === brand ? "selected" : "" %>><%= b.brand %> (<%= b.n %>)</option><% } %></select></div>
+  <div class="field"><button class="btn">Filter</button> <a class="btn light" href="/admin/carscraper/cars">Reset</a></div>
+</form>
+
+<div class="card flush">
+  <% if (!list.length) { %><p class="muted cs-pad">No cars found. If the data is not saved yet, press "Save to CMS database" on <a href="/admin/carscraper">CarScrapper</a>.</p><% } else { %>
+  <table><thead><tr><th></th><th>Car</th><th>Type</th><th>Price</th><th>Fuel · Body · Gearbox</th><th>Variants</th><th>Photos</th><th>Updated</th></tr></thead><tbody>
+  <% for (const c of list) { %>
+    <tr>
+      <td class="cs-thumb"><% if (c.photo) { %><img src="<%= c.photo %>" alt="" loading="lazy" width="96" height="64"><% } %></td>
+      <td><a href="/admin/carscraper/cars/<%= c.id %>"><strong><%= c.name %></strong></a><div class="hint"><%= c.slug %></div></td>
+      <td><span class="pill <%= c.kind === 'launched' ? 'ok' : 'warn' %>"><%= c.kind %></span><% if (c.kind === "upcoming" && c.expected_launch) { %><div class="hint"><%= c.expected_launch %></div><% } %></td>
+      <td><%= c.price_range || "—" %></td>
+      <td class="muted"><%= [c.fuel, c.body_type, c.transmission].filter(Boolean).join(" · ") %></td>
+      <td><%= c.variants_count %></td>
+      <td><%= c.photos %></td>
+      <td class="muted"><%= when(c.updated_at) %></td>
+    </tr>
+  <% } %>
+  </tbody></table>
+  <% } %>
+</div>
+<% if (pages > 1) { %>
+  <p class="mt"><% if (page > 1) { %><a class="btn light small" href="<%= link(page - 1) %>">← Previous</a><% } %> Page <%= page %> / <%= pages %> · <%= total %> cars <% if (page < pages) { %><a class="btn light small" href="<%= link(page + 1) %>">Next →</a><% } %></p>
+<% } %>
+<%- include("partials/foot") %>

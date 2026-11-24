@@ -1,0 +1,56 @@
+<%- include("partials/head", { title }) %>
+<%
+  const ago = (d) => {
+    if (!d) return "";
+    const s = (Date.now() - new Date(d).getTime()) / 1000;
+    if (s < 3600) return `${Math.max(1, Math.round(s / 60))} minutes ago`;
+    if (s < 86400) return `${Math.round(s / 3600)} hours ago`;
+    const days = Math.round(s / 86400);
+    return days === 1 ? "yesterday" : `${days} days ago`;
+  };
+  const when = (d) => (d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const human = (c) => {
+    if (!c) return "Manual only";
+    const [m, h, dom, mon, dow] = c.split(/\s+/);
+    if (/^\d+$/.test(m) && /^\*\/\d+$/.test(h) && dom === "*" && mon === "*" && dow === "*") return `Every ${h.slice(2)} hours at :${m.padStart(2, "0")}`;
+    if (/^\d+$/.test(m) && /^\d+$/.test(h) && dom === "*" && mon === "*" && /^\d$/.test(dow)) return `Weekly on ${DAYS[Number(dow)]} at ${h.padStart(2, "0")}:${m.padStart(2, "0")} IST`;
+    if (/^\d+$/.test(m) && /^\d+$/.test(h) && dom === "*" && mon === "*" && dow === "*") return `Daily at ${h.padStart(2, "0")}:${m.padStart(2, "0")} IST`;
+    return c;
+  };
+%>
+<div class="top">
+  <div><h1>Import & Scraping</h1><p class="sub">Sources that bring in data, once or on a schedule. Each source can fill only the fields its adapter supports. Content you wrote by hand does not change until you confirm the import.</p></div>
+</div>
+<div class="toolbar" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">
+  <p class="muted mb0" style="max-width:640px">We only use sources that allow an honest bot. robots.txt is followed, requests are rate-limited, and every host must have recorded proof of permission. Portals like CarDekho and CarWale do not allow automated copying in their terms, so they are not added.</p>
+  <a class="btn lime" href="/admin/scraper/sources/new">+ Add source</a>
+</div>
+<div class="src-grid mt">
+  <% for (const s of sources) { const j = s.lastJob; const st = (j && j.stats) || {}; %>
+    <div class="src-card">
+      <h3><%= s.name %> <% if (!s.enabled) { %><span class="pill">disabled</span><% } %> <% if (!s.permissions.length) { %><span class="pill warn">no permission</span><% } %></h3>
+      <p class="desc"><%= s.description %></p>
+      <div class="src-meta">
+        <div><span>Schedule</span><%= human(s.schedule) %></div>
+        <div><span>Next run</span><%= s.enabled && s.nextRunAt ? when(s.nextRunAt) : "—" %></div>
+      </div>
+      <div class="src-run">
+        <% if (j) { %>
+          <span class="pill <%= j.status === 'succeeded' ? 'ok' : j.status === 'failed' ? 'bad' : 'warn' %>">● <%= j.status === "succeeded" ? "Succeeded" : j.status === "failed" ? "Failed" : j.status %></span> <span class="muted"><%= ago(j.finishedAt || j.createdAt) %></span>
+          <div class="mt" style="margin-top:4px"><%= st.found ?? 0 %> found · <strong><%= st.new ?? 0 %> new</strong> · <%= st.updated ?? 0 %> updated · <%= st.unchanged ?? 0 %> unchanged · <%= st.failed ?? 0 %> failed</div>
+          <% if (j.error) { %><div class="err"><%= j.error %></div><% } %>
+        <% } else { %><span class="muted">Never run.</span><% } %>
+      </div>
+      <div class="src-actions">
+        <form class="inline" method="post" action="/admin/scraper/sources/<%= s.id %>/run"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime small" <%= s.enabled ? "" : "disabled" %>>▶ Run now</button></form>
+        <a class="btn light small" href="/admin/scraper/sources/<%= s.id %>">Edit</a>
+        <a class="btn light small" href="/admin/scraper/jobs?sourceId=<%= s.id %>">Runs</a>
+        <form class="inline" method="post" action="/admin/scraper/sources/<%= s.id %>/test" data-busy="Testing…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Test</button></form>
+        <form class="inline" method="post" action="/admin/scraper/sources/<%= s.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small"><%= s.enabled ? "Disable" : "Enable" %></button></form>
+        <form class="inline" method="post" action="/admin/scraper/sources/<%= s.id %>/delete" data-confirm="Remove <%= s.name %>? Its collected records stay."><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger small" aria-label="Delete <%= s.name %>">Delete</button></form>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include("partials/foot") %>

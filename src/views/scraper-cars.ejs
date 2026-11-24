@@ -1,0 +1,34 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div><h1>Scraped cars</h1><p class="sub">Every car the scraper brought in. Click a car to see its variants, specs, features, colours, photos and source. First <strong>Approve</strong>, then <strong>Import</strong>. A new car is created hidden in the CMS. For a car that already exists, you see the changes first, and it is updated only after you confirm.</p></div>
+</div>
+<div class="card">
+  <form class="toolbar" method="get">
+    <input type="search" name="q" value="<%= q %>" placeholder="Search brand or model…" aria-label="Search">
+    <% for (const [k, l] of [["", "All"], ["pending", "Pending"], ["approved", "Approved"], ["imported", "Imported"], ["rejected", "Rejected"]]) { %><button class="btn <%= status === k ? '' : 'light' %> small" name="status" value="<%= k %>"><%= l %></button><% } %>
+    <a class="btn light small" href="?missing=1">Missing data</a><a class="btn light small" href="?duplicates=1">Duplicates</a>
+    <span class="muted"><%= data.total %> cars</span>
+  </form>
+  <form method="post" action="/admin/scraper/records/bulk">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <div class="toolbar"><button class="btn lime small" name="do" value="approve" data-busy="Approving…">Approve ticked</button><button class="btn light small" name="do" value="import" data-busy="Importing…">Import ticked</button><button class="btn danger small" name="do" value="reject" data-confirm="Reject the ticked cars?">Reject ticked</button></div>
+    <table>
+      <thead><tr><th></th><th>Car</th><th>Source</th><th>Status</th><th>In CMS</th><th>Data</th></tr></thead>
+      <tbody>
+        <% for (const r of data.items) { const cms = matches.get(r.parentKey); %>
+          <tr>
+            <td><input type="checkbox" name="ids" value="<%= r.id %>" aria-label="Select <%= r.title %>"></td>
+            <td><a href="/admin/scraper/cars/<%= r.id %>"><strong><%= r.title %></strong></a><div class="muted"><%= new Date(r.extractedAt).toLocaleDateString("en-IN") %></div></td>
+            <td><%= r.source.name %></td>
+            <td><span class="pill <%= r.status === 'imported' ? 'ok' : r.status === 'approved' ? 'lime' : r.status === 'rejected' ? 'bad' : 'warn' %>"><%= r.status %></span><% if (r.importError) { %><div class="missing"><%= r.importError.slice(0, 80) %></div><% } %></td>
+            <td><% if (cms) { %><a href="/admin/cars/<%= cms.id %>"><%= cms.name %></a> <span class="pill"><%= cms.published ? "live" : "hidden" %></span><% } else { %><span class="muted">new car</span><% } %></td>
+            <td><% if (r.duplicateOfId) { %><span class="pill warn">duplicate?</span> <% } %><% if (r.missingFields.length) { %><span class="missing" title="<%= r.missingFields.join(', ') %>"><%= r.missingFields.length %> missing</span><% } else { %><span class="pill ok">complete</span><% } %></td>
+          </tr>
+        <% } %>
+        <% if (!data.items.length) { %><tr><td colspan="6" class="muted">Nothing here. Run a source from Sources.</td></tr><% } %>
+      </tbody>
+    </table>
+  </form>
+  <% if (pages > 1) { %><div class="pager"><% for (let i = 1; i <= Math.min(pages, 20); i++) { %><a class="btn <%= i === page ? '' : 'light' %> small" href="?<%= new URLSearchParams({ ...query, page: String(i) }) %>"><%= i %></a><% } %></div><% } %>
+</div>
+<%- include("partials/foot") %>

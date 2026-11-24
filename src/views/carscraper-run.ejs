@@ -1,0 +1,42 @@
+<%- include("partials/head", { title }) %>
+<% const s = run.summary || {}; const c = s.counts || {}; const o = s.options || {}; const when = (d) => d ? new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "—"; %>
+<p class="sub"><a href="/admin/carscraper">← CarScrapper</a></p>
+<div class="top">
+  <div>
+    <h1><%= s.label || run.kind %> · run #<%= run.id %></h1>
+    <p class="sub">Status: <span class="pill <%= run.status === 'done' ? 'ok' : run.status === 'failed' ? 'bad' : 'warn' %>" data-cs-status="<%= run.id %>"><%= run.status %></span> · <%= s.by %> · started <%= when(run.started_at) %><% if (run.finished_at) { %> · finished <%= when(run.finished_at) %><% } %></p>
+    <p class="hint"><%= o.refresh ? "Refresh: saved data was fetched again too" : "Only what was not saved yet" %><%= o.brand ? " · brand " + o.brand : "" %><%= o.limit ? " · max " + o.limit : "" %></p>
+  </div>
+  <div class="actions">
+    <% if (run.status === "running") { %>
+      <form class="inline" method="post" action="/admin/carscraper/stop"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn danger" data-confirm="Stop the scrape? Data saved so far will be kept.">Stop</button></form>
+    <% } %>
+    <% if (hasFile) { %><a class="btn light" href="/admin/carscraper/runs/<%= run.id %>/log.txt">Download full log</a><% } %>
+  </div>
+</div>
+
+<div class="card mt">
+  <progress class="cs-progress" data-cs-progress max="<%= s.total || 1 %>" value="<%= s.done || 0 %>"></progress>
+  <p class="hint" data-cs-progress-text>Step <%= s.step %>/<%= s.steps %> · <%= s.done %> / <%= s.total %></p>
+  <div class="cs-counts">
+    <div class="stat-card good"><div class="lbl">New</div><div class="num" data-cs-count="NEW"><%= c.NEW ?? 0 %></div><div class="note">came in for the first time</div></div>
+    <div class="stat-card info"><div class="lbl">Updated</div><div class="num" data-cs-count="UPDATED"><%= c.UPDATED ?? 0 %></div><div class="note">something changed (see below)</div></div>
+    <div class="stat-card"><div class="lbl">Same</div><div class="num" data-cs-count="SAME"><%= c.SAME ?? 0 %></div><div class="note">no change</div></div>
+    <div class="stat-card warn"><div class="lbl">Skipped</div><div class="num" data-cs-count="skipped"><%= c.skipped ?? 0 %></div><div class="note">page not found / error</div></div>
+  </div>
+  <p class="mt" data-cs-extra><% if (s.db) { %><strong>CMS database:</strong> <%= s.db.NEW %> new · <%= s.db.UPDATED %> updated · <%= s.db.SAME %> unchanged<% } %><% if (s.db && s.photos) { %> &nbsp;|&nbsp; <% } %><% if (s.photos) { %><strong>Photos (HD):</strong> <%= s.photos.done %> new · <%= s.photos.upgraded || 0 %> replaced by HD · <%= s.photos.failed %> failed · <%= s.photos.skipped %> already there<% } %><% if (s.site) { %> &nbsp;|&nbsp; <strong>Website:</strong> <%= s.site.NEW %> added · <%= s.site.UPDATED %> updated · <%= s.site.SAME %> unchanged<% if (s.site.hidden) { %> · <%= s.site.hidden %> waiting for photo/colour<% } %><% } %></p>
+  <% if (run.status !== "running" && (s.db || s.photos || s.site)) { %><p><a class="btn light" href="/admin/carscraper/cars">See saved cars →</a> <a class="btn light" href="/admin/cars">Website cars →</a></p><% } %>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>Live log</h2>
+    <div class="log cs-log" data-cs-log="<%= run.id %>"><%= run.log || "Starting…" %></div>
+  </div>
+  <div class="card">
+    <h2>What is new / what was updated</h2>
+    <div class="log cs-log" data-cs-changes><%= (s.changes || []).slice().reverse().join("\n") || "No NEW or UPDATED yet." %></div>
+    <p class="hint">Newest at the top. UPDATED shows: field: old -> new.</p>
+  </div>
+</div>
+<%- include("partials/foot") %>

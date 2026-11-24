@@ -1,0 +1,96 @@
+<%- include("partials/head", { title }) %>
+<%- include("partials/car-tabs", { car, tab: "details" }) %>
+<div class="notice">
+  <strong>AI helpers</strong> (Gemini → OpenAI → Claude): they write only from the facts below (price, specs, variants). Always read what they wrote before you Save.
+  <div class="toolbar mt mb0">
+    <form class="inline" method="post" action="/admin/cars/<%= car.id %>/ai-copy" data-busy="AI is writing… (about a minute)"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime small">Write overview, pros/cons & FAQs</button></form>
+    <form class="inline" method="post" action="/admin/cars/<%= car.id %>/ai-review" data-busy="AI is writing the review… (1–2 minutes)"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Write an expert review draft</button></form>
+    <form class="inline" method="post" action="/admin/cars/<%= car.id %>/keywords"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Generate keywords for this car</button></form>
+  </div>
+</div>
+<form method="post" action="/admin/cars/<%= car.id %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="layout-2">
+    <div>
+      <div class="card" id="basics">
+        <h2>Basics</h2>
+        <div class="grid g2">
+          <div class="field"><label class="f" for="brand_id">Brand</label><select id="brand_id" name="brand_id"><% for (const b of brands) { %><option value="<%= b.id %>" <%= b.id === car.brand_id ? "selected" : "" %>><%= b.name %></option><% } %></select></div>
+          <div class="field"><label class="f" for="name">Model name</label><input id="name" name="name" type="text" value="<%= car.name %>" required><div class="effect">The car's name everywhere on the website.</div></div>
+          <div class="field"><label class="f" for="slug">URL slug</label><input id="slug" name="slug" type="text" value="<%= car.slug %>"><div class="hint">/cars/<%= car.brand_slug %>/<strong><%= car.slug %></strong>. If you change it, a 301 redirect from the old URL is made automatically.</div></div>
+          <div class="field"><label class="f" for="body">Body type</label><select id="body" name="body"><% for (const x of BODIES) { %><option <%= x === car.body ? "selected" : "" %>><%= x %></option><% } %></select><div class="effect">SUV/Hatchback/... lists and filters.</div></div>
+          <div class="field"><label class="f" for="status">Status</label><select id="status" name="status"><% for (const x of STATUSES) { %><option <%= x === car.status ? "selected" : "" %>><%= x %></option><% } %></select><div class="effect">upcoming = Upcoming page; new-launch = 'Just launched' on the home page + Latest cars; on-sale = normal.</div></div>
+          <div class="field"><label class="f" for="launch">Launch date / text</label><input id="launch" name="launch" type="text" value="<%= car.launch || '' %>" placeholder="e.g. Dec 2026"><div class="effect">Shown as 'Expected launch' on the Upcoming card.</div></div>
+        </div>
+        <% if (car.status === "upcoming") { %><label class="check"><input type="checkbox" name="launch_draft"> When the status changes, also write an AI draft of the launch news</label><% } %>
+        <label class="check mt"><input type="checkbox" name="published" <%= car.published ? "checked" : "" %>> Show on website</label>
+        <div class="hint">If you untick this, the car and all its pages are removed from the website. (A car with no photo is also not shown.)</div>
+      </div>
+
+      <div class="card" id="specs">
+        <h2>Price & key specs</h2>
+        <p class="hint">The VariantWise import updates these fields with real data every week. When you change variants in the Variants tab, the price also updates automatically.</p>
+        <div class="grid g3">
+          <div class="field"><label class="f" for="min_price">Starting price (lakh)</label><input id="min_price" name="min_price" type="number" step="0.01" value="<%= car.min_price %>"></div>
+          <div class="field"><label class="f" for="max_price">Top price (lakh)</label><input id="max_price" name="max_price" type="number" step="0.01" value="<%= car.max_price %>"></div>
+          <div class="field"><label class="f" for="seats">Seats</label><input id="seats" name="seats" type="number" value="<%= car.seats %>"></div>
+          <div class="field"><label class="f" for="engine">Engine / battery</label><input id="engine" name="engine" type="text" value="<%= car.engine %>" placeholder="1197 cc"></div>
+          <div class="field"><label class="f" for="power">Max power</label><input id="power" name="power" type="text" value="<%= car.power %>" placeholder="82 PS"></div>
+          <div class="field"><label class="f" for="torque">Max torque</label><input id="torque" name="torque" type="text" value="<%= car.torque %>" placeholder="112 Nm"></div>
+          <div class="field"><label class="f" for="mileage">Mileage / range</label><input id="mileage" name="mileage" type="text" value="<%= car.mileage %>" placeholder="24.8 kmpl"></div>
+          <div class="field"><label class="f" for="boot">Boot (litres)</label><input id="boot" name="boot" type="number" value="<%= car.boot %>"></div>
+          <div class="field"><label class="f" for="ncap">Safety stars</label><input id="ncap" name="ncap" type="number" min="0" max="5" value="<%= car.ncap %>"><div class="hint">Bharat NCAP / Global NCAP result. 0 = not tested.</div></div>
+        </div>
+        <div class="field"><span class="f">Fuels</span><div class="toolbar mb0"><% for (const f of FUELS) { %><label class="check"><input type="checkbox" name="fuel_<%= f %>" <%= car.fuels.includes(f) ? "checked" : "" %>> <%= f %></label><% } %><label class="check"><input type="checkbox" name="auto" <%= car.auto ? "checked" : "" %>> Automatic available</label></div></div>
+        <div class="grid g3">
+          <div class="field"><label class="f" for="rating">Rating (0-5)</label><input id="rating" name="rating" type="number" step="0.1" value="<%= car.rating %>"></div>
+          <div class="field"><label class="f" for="reviews">Review count</label><input id="reviews" name="reviews" type="number" value="<%= car.reviews %>"></div>
+          <div class="field"><label class="f" for="popularity">Popularity (0-100)</label><input id="popularity" name="popularity" type="number" value="<%= car.popularity %>"><div class="hint">Higher = shown higher in Popular cars and on the home page.</div></div>
+        </div>
+        <div class="field"><label class="f" for="vw_id">VariantWise ID</label><input id="vw_id" name="vw_id" type="text" value="<%= (car.source && car.source.vwId) || '' %>" placeholder="e.g. mahindra-xuv-7xo"><div class="hint">If the import did not match this car, enter the VariantWise model ID here. The next import will bring in the real data.</div></div>
+      </div>
+
+      <div class="card" id="content">
+        <h2>Content on the car page</h2>
+        <div class="field"><label class="f" for="angle">One-line summary</label><input id="angle" name="angle" type="text" value="<%= car.angle %>"><div class="hint">The line that comes after 'the', e.g. "easy city hatch that stays cheap to run".</div><div class="effect">Below the car page heading, on cards and in the meta description.</div></div>
+        <div class="grid g2">
+          <div class="field"><label class="f" for="pros">What we like (one per line)</label><textarea id="pros" name="pros"><%= text.pros %></textarea></div>
+          <div class="field"><label class="f" for="cons">What could be better (one per line)</label><textarea id="cons" name="cons"><%= text.cons %></textarea></div>
+        </div>
+        <div class="field"><label class="f" for="overview">Buying guide (overview)</label><textarea class="tall" id="overview" name="overview" data-seo-body><%= text.overview %></textarea><div class="hint">"## Heading" starts a new section. Leave an empty line between paragraphs.</div><div class="effect">The 'Buying guide' section on the car page. Better text = better ranking.</div></div>
+        <div class="field"><label class="f" for="faqs">FAQs</label><textarea class="tall" id="faqs" name="faqs"><%= text.faqs %></textarea><div class="hint">Format: "Q: question", then on the next line "A: answer". Leave an empty line between FAQs.</div><div class="effect">The FAQs on the car page, and FAQ schema for Google.</div></div>
+        <div class="field"><label class="f" for="colors">Colours</label><textarea class="mono" id="colors" name="colors"><%= text.colors %></textarea><div class="hint">Each line: Colour name | #RRGGBB | extra price (optional). E.g. "Pristine White | #F2F2EE" or "Fiery Red | #B11226 | +15000" (rupees; use "-5000" if it costs less). Add a price only if the company has given one. If you leave it empty, the website does not show a price for that colour.</div><div class="effect">Colour chips on the car page, their price, and the photos of that colour.</div></div>
+      </div>
+
+      <div class="card" id="model3d">
+        <h2>360° / 3D view</h2>
+        <p class="hint">The Sketchfab model ID (the 32-character code at the end of the URL). Check the license carefully: "NonCommercial" models should not be used on a commercial website.</p>
+        <% const m = car.model3d || {}; %>
+        <div class="grid g2">
+          <div class="field"><label class="f" for="m3d_uid">Sketchfab model ID</label><input id="m3d_uid" name="m3d_uid" type="text" value="<%= m.uid || '' %>"><div class="effect">Leave it empty and the '360° view' button will not show.</div></div>
+          <div class="field"><label class="f" for="m3d_name">Model title</label><input id="m3d_name" name="m3d_name" type="text" value="<%= m.name || '' %>"></div>
+          <div class="field"><label class="f" for="m3d_author">Author</label><input id="m3d_author" name="m3d_author" type="text" value="<%= m.author || '' %>"></div>
+          <div class="field"><label class="f" for="m3d_license">License</label><input id="m3d_license" name="m3d_license" type="text" value="<%= m.license || '' %>"><% if (/noncommercial/i.test(m.license || "")) { %><div class="hint" style="color:#b45309">⚠ NonCommercial license: using this model on a business website may break the license.</div><% } %></div>
+        </div>
+        <input type="hidden" name="m3d_url" value="<%= m.url || '' %>">
+      </div>
+      <button class="btn lime">Save car</button>
+    </div>
+
+    <aside class="seo-box">
+      <div class="card" id="seo">
+        <h2>Keywords for this car</h2>
+        <p class="hint">The AI writer and the SEO checker use these. Each tab (price, mileage...) has its own main keyword.</p>
+        <% if (!keywords.length) { %><p class="muted">No keywords yet. Click "Generate keywords for this car".</p><% } %>
+        <div><% for (const k of keywords.slice(0, 40)) { %><span class="kw <%= k.priority === 'high' ? 'high' : '' %>" title="<%= k.target_path %>"><%= k.phrase %></span><% } %></div>
+        <% if (keywords.length > 40) { %><p class="muted"><a href="/admin/r/keywords?q=<%= encodeURIComponent(car.name) %>">See all <%= keywords.length %> →</a></p><% } %>
+      </div>
+      <div class="card">
+        <h2>On this car</h2>
+        <p><a href="/admin/cars/<%= car.id %>/variants"><%= counts.variants %> variants</a> · <a href="/admin/cars/<%= car.id %>/photos"><%= counts.photos %> photos</a> · <a href="/admin/articles?car=<%= car.id %>"><%= counts.articles %> articles</a></p>
+        <button class="btn danger small" formaction="/admin/cars/<%= car.id %>/delete" formnovalidate data-confirm="Delete <%= car.brand_name %> <%= car.name %> with its variants and photos? Its URL will redirect to the brand page.">Delete this car</button>
+      </div>
+    </aside>
+  </div>
+</form>
+<%- include("partials/foot") %>

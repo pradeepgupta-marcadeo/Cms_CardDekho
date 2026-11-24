@@ -1,0 +1,7 @@
+<%- include("partials/head", { title }) %>
+<h1>Activity log</h1>
+<p class="sub">Who changed what, and when. Last 200 changes.</p>
+<div class="card mt"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>What</th><th>Detail</th></tr></thead><tbody>
+<% for (const r of list) { %><tr><td class="nowrap"><%= r.ts.toLocaleString("en-IN") %></td><td><%= r.user_name || "system" %></td><td><%= r.action %></td><td><%= r.entity %><%= r.entity_id ? ` #${r.entity_id}` : "" %></td><td class="muted"><%= r.detail %></td></tr><% } %>
+</tbody></table></div>
+<%- include("partials/foot") %>

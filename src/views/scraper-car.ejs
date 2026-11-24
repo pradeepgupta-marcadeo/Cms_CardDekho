@@ -1,0 +1,124 @@
+<%- include("partials/head", { title }) %>
+<%
+  const money = (r) => (r ? `₹${(Number(r) / 1e5).toFixed(2)} lakh` : "—");
+  const val = (v) => (v === null || v === undefined || v === "" ? "—" : v === true ? "Yes" : v === false ? "No" : v);
+  const variants = (bundle ? bundle.variants : p.variants) || [];
+  const specOf = (v) => (bundle ? v.specification : v.specification) || {};
+  const featuresOf = (v) => (bundle ? v.features.map((f) => ({ name: f.feature.name, available: f.available, value: f.value })) : v.features || []);
+  const spec = variants.length ? specOf(variants[0]) : p.specification || {};
+  const SPEC_ROWS = [["Engine", "engineType"], ["Engine capacity (cc)", "engineCapacityCc"], ["Max power (PS)", "maxPowerPs"], ["Max torque (Nm)", "maxTorqueNm"], ["Transmission", "transmissionType"], ["Gears", "gears"], ["ARAI mileage (kmpl)", "araiMileageKmpl"], ["Claimed range (km)", "claimedRangeKm"], ["Battery (kWh)", "batteryKwh"], ["Length (mm)", "lengthMm"], ["Width (mm)", "widthMm"], ["Height (mm)", "heightMm"], ["Wheelbase (mm)", "wheelbaseMm"], ["Boot (litres)", "bootLitres"], ["Fuel tank (litres)", "fuelTankLitres"], ["Kerb weight (kg)", "kerbWeightKg"], ["Front suspension", "frontSuspension"], ["Rear suspension", "rearSuspension"], ["Airbags", "airbags"], ["ESC", "esc"], ["ISOFIX", "isofix"], ["NCAP rating", "ncapRating"]];
+%>
+<p class="sub"><a href="/admin/scraper/cars">← Scraped cars</a></p>
+<div class="top">
+  <div>
+    <h1><%= record.title %></h1>
+    <p class="sub">From <strong><%= record.source.name %></strong> · <a href="<%= record.sourceUrl %>" target="_blank" rel="noopener">source page ↗</a> · extracted <%= new Date(record.extractedAt).toLocaleString("en-IN") %> · status <span class="pill <%= record.status === 'imported' ? 'ok' : record.status === 'approved' ? 'lime' : record.status === 'rejected' ? 'bad' : 'warn' %>"><%= record.status %></span></p>
+  </div>
+  <div class="actions">
+    <% if (["pending", "failed"].includes(record.status)) { %>
+      <form class="inline" method="post" action="/admin/scraper/records/<%= record.id %>/approve" data-busy="Approving…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime">Approve</button></form>
+      <form class="inline" method="post" action="/admin/scraper/records/<%= record.id %>/reject"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="text" name="note" placeholder="Reason (optional)" aria-label="Reason" style="max-width:180px"> <button class="btn danger">Reject</button></form>
+    <% } %>
+    <% if (cms) { %><a class="btn light" href="/admin/cars/<%= cms.id %>">Open CMS car</a><% } %>
+  </div>
+</div>
+
+<% if (record.duplicateOf) { %><div class="notice">Possible duplicate of <strong><%= record.duplicateOf.title %></strong> from <%= record.duplicateOf.source.name %> (<%= record.duplicateOf.status %>). Approving both is fine: the second only fills gaps and never overrides the first.</div><% } %>
+<% if (record.missingFields.length) { %><div class="notice">Missing in this record (left empty, never guessed): <span class="missing"><%= record.missingFields.join(", ") %></span></div><% } %>
+<% if (record.warnings.length) { %><div class="errors"><%= record.warnings.join(" · ") %></div><% } %>
+
+<% if (["approved", "imported"].includes(record.status)) { %>
+  <div class="card" id="import">
+    <h2>Import into the CMS</h2>
+    <% if (planError) { %><div class="errors"><%= planError %></div><% } else if (plan) { %>
+      <% if (plan.action === "create") { %>
+        <p>No matching car in the CMS. Importing creates <strong>a new hidden car</strong> with <%= plan.mapped.variants.length %> variants and <%= plan.mapped.photos.length %> licensed photos. Add copy, check it, then publish it from Cars.</p>
+        <form method="post" action="/admin/scraper/records/<%= record.id %>/import" data-busy="Importing…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime">Import as new car</button></form>
+      <% } else if (plan.action === "skip") { %>
+        <p>The CMS car <a href="/admin/cars/<%= plan.car.id %>"><%= plan.car.name %></a> already matches this data. Nothing to import.</p>
+      <% } else { %>
+        <p>Matches the CMS car <a href="/admin/cars/<%= plan.car.id %>"><strong><%= plan.car.name %></strong></a> (<%= plan.car.published ? "live on the website" : "hidden" %>). These changes will be made; name, URL, status, copy, ratings and SEO stay as they are:</p>
+        <table class="diff"><thead><tr><th>Field</th><th>Now in CMS</th><th>After import</th></tr></thead><tbody>
+          <% for (const c of plan.changes) { %><tr><td><%= c.field %></td><td><%= c.from %></td><td><%= c.to %></td></tr><% } %>
+          <% if (plan.newPhotos) { %><tr><td>photos</td><td>—</td><td>+<%= plan.newPhotos %> licensed photos</td></tr><% } %>
+        </tbody></table>
+        <form method="post" action="/admin/scraper/records/<%= record.id %>/import" class="mt" data-confirm="Update <%= plan.car.name %> with these changes?<%= plan.car.published ? ' It is live on the website.' : '' %>">
+          <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="confirm" value="yes">
+          <button class="btn lime">Confirm and update the CMS car</button>
+        </form>
+      <% } %>
+    <% } %>
+    <% if (history.length) { %><h3 class="mt">Import history</h3><table><tbody><% for (const h of history) { %><tr><td class="muted nowrap"><%= h.created_at.toLocaleString("en-IN") %></td><td><%= h.action %></td><td><span class="pill <%= h.status === 'done' ? 'ok' : h.status === 'failed' ? 'bad' : 'warn' %>"><%= h.status.replace(/_/g, " ") %></span></td><td class="muted"><%= h.error || "" %></td></tr><% } %></tbody></table><% } %>
+  </div>
+<% } %>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>Model</h2>
+    <dl class="kv">
+      <dt>Brand</dt><dd><%= p.brand.name %></dd>
+      <dt>Model</dt><dd><%= p.name %></dd>
+      <dt>Body type</dt><dd><%= val(p.bodyType) %> <span class="muted"><%= p.carType || "" %></span></dd>
+      <dt>Ex-showroom price</dt><dd><%= money(p.minPrice) %> – <%= money(p.maxPrice) %></dd>
+      <dt>Fuels</dt><dd><%= p.fuelTypes.join(", ") || "—" %></dd>
+      <dt>Transmissions</dt><dd><%= p.transmissions.join(", ") || "—" %></dd>
+      <dt>Status</dt><dd><%= p.status %><%= p.discontinued ? " (discontinued)" : "" %></dd>
+      <dt>Official page</dt><dd><%- p.officialUrl ? `<a href="${p.officialUrl}" target="_blank" rel="noopener">${p.officialUrl}</a>` : "—" %></dd>
+      <dt>Source IDs</dt><dd class="muted"><%= Object.entries(p.externalIds).map(([k, v]) => `${k}: ${v}`).join(" · ") %></dd>
+      <% for (const [k, v] of Object.entries(p.extra || {})) { if (v === null || typeof v === "object") continue; %><dt><%= k %></dt><dd><%= v %></dd><% } %>
+    </dl>
+  </div>
+  <div class="card">
+    <h2>Specifications<%= variants.length ? ` (${variants[0].name})` : "" %></h2>
+    <dl class="kv"><% for (const [label, k] of SPEC_ROWS) { %><dt><%= label %></dt><dd class="<%= spec[k] === null || spec[k] === undefined ? 'missing' : '' %>"><%= val(spec[k]) %></dd><% } %></dl>
+  </div>
+</div>
+
+<div class="card scroll-x">
+  <h2>Variants (<%= variants.length %>)</h2>
+  <table>
+    <thead><tr><th>Variant</th><th>Fuel</th><th>Transmission</th><th>Drive</th><th class="right">Ex-showroom</th><th>Key features</th></tr></thead>
+    <tbody>
+      <% for (const v of variants) { %>
+        <tr><td><%= v.name %><% if (v.discontinued) { %> <span class="pill bad">discontinued</span><% } %></td><td><%= val(v.fuelType) %></td><td><%= val(v.transmission) %> <span class="muted"><%= v.transmissionDetail || "" %></span></td><td><%= val(v.drivetrain) %></td><td class="right nowrap"><%= money(v.exShowroomPrice) %></td>
+          <td class="muted"><%= featuresOf(v).filter((f) => f.available).slice(0, 5).map((f) => f.value && f.value !== "true" ? `${f.name} (${f.value})` : f.name).join(" · ") %></td></tr>
+      <% } %>
+      <% if (!variants.length) { %><tr><td colspan="6" class="muted">This source has no variants (model-level facts only).</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+
+<% if (variants.length) { const fl = featuresOf(variants[variants.length - 1]); %>
+<div class="card">
+  <h2>Features (top variant: <%= variants[variants.length - 1].name %>)</h2>
+  <p><% for (const f of fl) { %><span class="kw <%= f.available ? 'high' : '' %>"><%= f.available === null ? "?" : f.available ? "✓" : "✕" %> <%= f.name %><%= f.value && f.value !== "true" ? ` (${f.value})` : "" %></span><% } %></p>
+</div>
+<% } %>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>Colours</h2>
+    <% if (!p.colors.length) { %><p class="missing">No colours from this source. Hex codes are never invented; add them in the CMS car editor.</p><% } %>
+    <p><% for (const c of p.colors) { %><span class="kw"><% if (c.hex) { %><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<%= c.hex %>;border:1px solid #ccc"></span> <% } %><%= c.name %></span><% } %></p>
+  </div>
+  <div class="card">
+    <h2>Provenance</h2>
+    <p class="hint">Where each piece of data came from.</p>
+    <dl class="kv"><% for (const [k, v] of Object.entries(record.provenance || {}).slice(0, 12)) { %><dt><%= k %></dt><dd><a href="<%= v %>" target="_blank" rel="noopener"><%= String(v).replace(/^https?:\/\//, "").slice(0, 60) %></a></dd><% } %></dl>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Photos for this car (<%= imageRecords.length %>)</h2>
+  <p class="hint">Only photos whose licence allows commercial reuse. Each photo keeps its author credit. You can also approve photo records from "Images, news & brands".</p>
+  <div class="thumbs">
+    <% for (const i of imageRecords) { const thumb = bundle && bundle.images.find((x) => x.sourceUrl === i.sourceUrl)?.thumbUrl; %>
+      <figure>
+        <% if (thumb) { %><img src="<%= thumb %>" alt="" loading="lazy"><% } %>
+        <figcaption><span class="pill <%= i.status === 'pending' ? 'warn' : 'ok' %>"><%= i.status %></span> <a href="<%= i.sourceUrl %>" target="_blank" rel="noopener"><%= i.title.split(":").slice(1).join(":").slice(0, 50) %></a></figcaption>
+      </figure>
+    <% } %>
+  </div>
+  <% if (!imageRecords.length) { %><p class="muted">No photos yet. Approve this car, then run the "Wikimedia Commons images" source.</p><% } %>
+</div>
+<%- include("partials/foot") %>

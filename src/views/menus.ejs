@@ -1,0 +1,23 @@
+<%- include("partials/head", { title }) %>
+<h1>Menus</h1>
+<p class="sub">The website's top menu (New Cars dropdown, Compare, News & Reviews) and the footer links. Each link's <code>href</code> must be the final URL (not one that redirects).</p>
+<% if (error) { %><div class="errors mt"><%= error %></div><% } %>
+<form method="post" action="/admin/menus" class="mt">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <div class="grid g2">
+    <div class="card">
+      <h2>Top menu</h2>
+      <p class="hint">Each item: <code>{"label": "New Cars", "href": "/new-cars", "groups": [{"title": "Explore", "links": [{"label": "...", "href": "/...", "hint": "..."}]}]}</code>. <code>groups: []</code> = a link with no dropdown.</p>
+      <textarea class="tall mono" name="nav" aria-label="Top menu JSON" data-json style="min-height:560px"><%= typeof siteNav === "string" ? siteNav : JSON.stringify(siteNav, null, 2) %></textarea>
+      <div class="effect">The header and mobile menu on every page.</div>
+    </div>
+    <div class="card">
+      <h2>Footer</h2>
+      <p class="hint">Each column: <code>{"title": "Company", "links": [{"label": "About", "href": "/about"}]}</code></p>
+      <textarea class="tall mono" name="footer" aria-label="Footer JSON" data-json style="min-height:560px"><%= typeof footer === "string" ? footer : JSON.stringify(footer, null, 2) %></textarea>
+      <div class="effect">The footer on every page.</div>
+    </div>
+  </div>
+  <button class="btn lime">Save menus</button>
+</form>
+<%- include("partials/foot") %>

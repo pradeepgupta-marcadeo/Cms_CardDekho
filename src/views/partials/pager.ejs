@@ -1,0 +1,16 @@
+<%
+  // Page numbers that never run off the screen: first, last, and a few around the current page.
+  // Parameters: page, pages, link (a function that turns a page number into an address).
+  const shown = [...new Set([1, 2, page - 1, page, page + 1, pages - 1, pages].filter((n) => n >= 1 && n <= pages))].sort((a, b) => a - b);
+%>
+<% if (pages > 1) { %>
+<nav class="pager" aria-label="Pages">
+  <% if (page > 1) { %><a class="btn light small" href="<%= link(page - 1) %>">← Prev</a><% } %>
+  <% shown.forEach((n, i) => { %>
+    <% if (i > 0 && n - shown[i - 1] > 1) { %><span class="muted" aria-hidden="true">…</span><% } %>
+    <a class="btn <%= n === page ? '' : 'light' %> small" href="<%= link(n) %>" <%= n === page ? 'aria-current=page' : '' %>><%= n %></a>
+  <% }) %>
+  <% if (page < pages) { %><a class="btn light small" href="<%= link(page + 1) %>">Next →</a><% } %>
+  <span class="muted pager-of">Page <%= page %> of <%= pages %></span>
+</nav>
+<% } %>

@@ -1,0 +1,13 @@
+<%- include("partials/head", { title }) %>
+<h1>My account</h1>
+<p class="sub"><%= user.name %> · <%= user.email %> · <%= user.role %></p>
+<% if (error) { %><div class="errors mt"><%= error %></div><% } %>
+<form class="card mt" method="post" action="/admin/account" style="max-width:480px">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Change password</h2>
+  <div class="field"><label class="f" for="current">Current password</label><input id="current" name="current" type="password" autocomplete="current-password" required></div>
+  <div class="field"><label class="f" for="next">New password</label><input id="next" name="next" type="password" autocomplete="new-password" minlength="10" required><div class="hint">At least 10 characters.</div></div>
+  <div class="field"><label class="f" for="confirm">New password again</label><input id="confirm" name="confirm" type="password" autocomplete="new-password" required></div>
+  <button class="btn lime">Change password</button>
+</form>
+<%- include("partials/foot") %>

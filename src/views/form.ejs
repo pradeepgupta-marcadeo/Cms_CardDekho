@@ -1,0 +1,25 @@
+<%- include("partials/head", { title }) %>
+<% const pk = def.pk || "id"; const id = row[pk]; %>
+<div class="top">
+  <div>
+    <p class="sub"><a href="/admin/r/<%= name %>">← <%= def.title %></a></p>
+    <h1><%= title %></h1>
+    <p class="sub"><%= def.intro %></p>
+  </div>
+  <div class="actions">
+    <% if (!isNew && def.preview) { %><a class="btn light" href="<%= siteUrl %><%= def.preview(row) %>" target="_blank" rel="noopener">View on website ↗</a><% } %>
+  </div>
+</div>
+<% if (errors.length) { %><div class="errors"><% for (const e of errors) { %><div><%= e %></div><% } %></div><% } %>
+<form class="card" method="post" action="/admin/r/<%= name %><%= isNew ? "" : "/" + encodeURIComponent(id) %>">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <% for (const f of def.fields) { %><%- include("partials/field", { f, row, options }) %><% } %>
+  <button class="btn lime">Save</button>
+</form>
+<% if (!isNew && !def.noCreate) { %>
+  <form method="post" action="/admin/r/<%= name %>/<%= encodeURIComponent(id) %>/delete" data-confirm="Delete this <%= def.singular %>? This cannot be undone.">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <button class="btn danger">Delete <%= def.singular %></button>
+  </form>
+<% } %>
+<%- include("partials/foot") %>

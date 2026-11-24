@@ -1,0 +1,31 @@
+<%- include("partials/head", { title }) %>
+<h1>Import history</h1>
+<p class="sub">A record of every import from the scraper into the CMS. Use Retry on "Failed" ones. "Awaiting confirmation" cars are already in the CMS: open the car, check the changes and confirm.</p>
+<% if (approved.length) { %>
+  <div class="notice"><strong><%= approved.length %></strong> approved records are waiting to be imported. <a href="/admin/scraper/cars?status=approved">Cars</a> · <a href="/admin/scraper/records?entityType=image&status=approved">Photos</a> · <a href="/admin/scraper/records?entityType=news&status=approved">News</a></div>
+<% } %>
+<nav class="tabs">
+  <% for (const [k, l] of [["", "All"], ["done", "Done"], ["awaiting_confirmation", "Awaiting confirmation"], ["failed", "Failed"]]) { %><a href="?status=<%= k %>" class="<%= status === k ? 'on' : '' %>"><%= l %></a><% } %>
+</nav>
+<div class="card"><table>
+  <thead><tr><th>When</th><th>Record</th><th>Action</th><th>Status</th><th>CMS item</th><th>By</th><th></th></tr></thead>
+  <tbody>
+  <% for (const i of list) { %>
+    <tr>
+      <td class="nowrap muted"><%= i.created_at.toLocaleString("en-IN") %></td>
+      <td><%= i.entity_type === "model" ? "" : i.entity_type + ": " %><% if (i.entity_type === "model") { %><a href="/admin/scraper/cars/<%= i.record_id %>"><%= i.title %></a><% } else { %><%= i.title %><% } %><% if (i.error) { %><div class="missing"><%= i.error %></div><% } %>
+        <% if (i.diff && i.diff.changes && i.diff.changes.length) { %><div class="muted"><%= i.diff.changes.map((c) => c.field).join(", ") %><%= i.diff.newPhotos ? ` + ${i.diff.newPhotos} photos` : "" %></div><% } %></td>
+      <td><%= i.action %></td>
+      <td><span class="pill <%= i.status === 'done' ? 'ok' : i.status === 'failed' ? 'bad' : 'warn' %>"><%= i.status.replace(/_/g, " ") %></span></td>
+      <td><% if (i.cms_entity === "cars" && i.cms_id) { %><a href="/admin/cars/<%= i.cms_id %>">car #<%= i.cms_id %></a><% } else if (i.cms_entity) { %><%= i.cms_entity %> #<%= i.cms_id %><% } %></td>
+      <td><%= i.user_name || "system" %></td>
+      <td class="right nowrap">
+        <% if (i.status === "failed") { %><form class="inline" method="post" action="/admin/scraper/imports/<%= i.id %>/retry" data-busy="Retrying…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Retry</button></form><% } %>
+        <% if (i.status === "awaiting_confirmation") { %><a class="btn lime small" href="/admin/scraper/cars/<%= i.record_id %>#import">Review & confirm</a><% } %>
+      </td>
+    </tr>
+  <% } %>
+  <% if (!list.length) { %><tr><td colspan="7" class="muted">No imports yet.</td></tr><% } %>
+  </tbody>
+</table></div>
+<%- include("partials/foot") %>

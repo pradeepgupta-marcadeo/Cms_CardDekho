@@ -1,0 +1,76 @@
+<%- include("partials/head", { title }) %>
+<%- include("partials/car-tabs", { car, tab: "photos" }) %>
+<p class="sub">The first photo (order 0) is the car's main photo: used on cards, as the big photo on the car page, and as the Google/social share image. 'kind' tells which angle the photo shows (front, rear, side, interior), so the Images tab shows it in the right place.</p>
+<div class="card mt">
+  <h2>Current photos (<%= photos.length %>)</h2>
+  <% const cols = (car.colors || []); if (cols.length) { %>
+    <div class="toolbar">
+      <% for (const c of cols) { const n = photos.filter((p) => p.colour === c.name).length; %><span class="kw <%= n ? 'high' : '' %>"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<%= c.hex %>;border:1px solid #cbd5e1;margin-right:4px"></span><%= c.name %>: <%= n %></span><% } %>
+      <span class="kw">no colour: <%= photos.filter((p) => !p.colour).length %></span>
+      <form class="inline" method="post" action="/admin/cars/<%= car.id %>/photos/auto-colour" data-busy="Reading the photos…"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light small">Auto-tag colours</button></form>
+    </div>
+    <p class="hint">The website shows only real photos of the colour a buyer picks. Set the colour on each photo; a colour with no photo says so on the website.</p>
+  <% } %>
+  <% if (!photos.length) { %><p class="muted">No photos yet. The car stays hidden on the website until it has one.</p><% } %>
+  <div class="photos">
+    <% for (const p of photos) { %>
+      <figure>
+        <img src="<%= p.src.startsWith('/') && !p.src.startsWith('/uploads') ? siteUrl + p.src : p.src %>" alt="">
+        <figcaption>
+          <form method="post" action="/admin/cars/<%= car.id %>/photos/<%= p.id %>">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <div class="toolbar mb0">
+              <select name="kind" aria-label="Photo angle"><% for (const k of ["front", "rear", "side", "interior", "detail"]) { %><option <%= k === p.kind ? "selected" : "" %>><%= k %></option><% } %></select>
+              <input type="number" name="sort" value="<%= p.sort %>" aria-label="Order" style="width:60px">
+              <select name="colour" aria-label="Colour shown in this photo"><option value="">Colour: not set</option><% for (const c of (car.colors || [])) { %><option value="<%= c.name %>" <%= c.name === p.colour ? "selected" : "" %>><%= c.name %></option><% } %></select>
+            </div>
+            <div class="toolbar mt mb0"><button class="btn light small" name="action" value="save">Save</button><button class="btn danger small" name="action" value="delete" data-confirm="Remove this photo?">Remove</button></div>
+          </form>
+          <div class="mt"><%= p.credit %> · <%= p.license %><% if (p.page) { %> · <a href="<%= p.page %>" target="_blank" rel="noopener">source</a><% } %></div>
+        </figcaption>
+      </figure>
+    <% } %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Find free photos on Wikimedia Commons</h2>
+  <p class="hint">Only photos whose license allows commercial use are shown (CC BY, CC BY-SA, CC0, public domain). The photographer's credit will show automatically on the website's 'Image credits' page.</p>
+  <form class="toolbar" method="get">
+    <input type="hidden" name="search" value="1">
+    <input type="search" name="q" value="<%= term %>" aria-label="Search term" style="max-width:380px">
+    <button class="btn lime" data-busy="Searching Wikimedia Commons…">Search</button>
+  </form>
+  <% if (searchError) { %><div class="errors">Search failed: <%= searchError %></div><% } %>
+  <% if (searched && !results.length && !searchError) { %><p class="muted">No free landscape photos found. Try another term, e.g. the model name with the year ("Tata Sierra 2025").</p><% } %>
+  <div class="photos">
+    <% for (const r of results) { %>
+      <figure>
+        <img src="<%= r.src %>" alt="" loading="lazy">
+        <figcaption>
+          <div><%= r.title.replace(/^File:/, "") %></div>
+          <div><%= r.credit %> · <%= r.license %></div>
+          <form method="post" action="/admin/cars/<%= car.id %>/photos" class="mt">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <% for (const k of ["src", "w", "h", "credit", "license", "page"]) { %><input type="hidden" name="<%= k %>" value="<%= r[k] %>"><% } %>
+            <input type="hidden" name="back_search" value="<%= term %>">
+            <div class="toolbar mb0"><select name="kind" aria-label="Photo angle"><% for (const k of ["front", "rear", "side", "interior", "detail"]) { %><option <%= k === r.kind ? "selected" : "" %>><%= k %></option><% } %></select><button class="btn lime small">Add</button></div>
+          </form>
+        </figcaption>
+      </figure>
+    <% } %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Upload your own photo</h2>
+  <p class="hint">Only upload photos you have the right to use (taken by you, or with the company's permission). The image is compressed to WebP automatically, so the page loads fast.</p>
+  <form method="post" action="/admin/media/upload?car=<%= car.id %>&_csrf=<%= csrf %>" enctype="multipart/form-data" class="toolbar">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required>
+    <select name="kind" aria-label="Photo angle"><% for (const k of ["front", "rear", "side", "interior", "detail"]) { %><option><%= k %></option><% } %></select>
+    <input type="text" name="credit" placeholder="Credit, e.g. Wheelora" aria-label="Credit">
+    <button class="btn lime" data-busy="Uploading…">Upload</button>
+  </form>
+</div>
+<%- include("partials/foot") %>

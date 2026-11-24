@@ -1,0 +1,77 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div><h1>SEO</h1><p class="sub">Manage the Google title, description and keywords of every website page here. Each card's score is based on what Google sees on that page right now.</p></div>
+  <div class="actions">
+    <button class="btn lime" type="button" data-autofix-all>✨ Auto-fix all shown</button>
+    <a class="btn light" href="<%= siteUrl %>/sitemap.xml" target="_blank" rel="noopener">Sitemap ↗</a>
+    <a class="btn light" href="/admin/seo<%= group || q ? `?group=${encodeURIComponent(group)}&q=${encodeURIComponent(q)}&page=${pageNo}` : "" %>">Refresh</a>
+  </div>
+</div>
+
+<form class="seo-tools" method="get" action="/admin/seo">
+  <input type="search" name="q" value="<%= q %>" placeholder="Search pages, cars or articles…" aria-label="Search pages">
+  <input type="hidden" name="group" value="<%= group %>">
+  <button class="btn light">Search</button>
+</form>
+<div class="pills seo-filters">
+  <a href="/admin/seo?q=<%= encodeURIComponent(q) %>" class="<%= !group ? 'on' : '' %>">All</a>
+  <% for (const f of FILTERS) { %><a href="/admin/seo?group=<%= encodeURIComponent(f) %>&q=<%= encodeURIComponent(q) %>" class="<%= group === f ? 'on' : '' %>"><%= f %></a><% } %>
+</div>
+<p class="muted"><%= total %> page<%= total === 1 ? "" : "s" %><%= group ? ` in "${group}"` : "" %> · showing <%= cards.length %> · <b><%= cards.filter((c) => c.score < 100).length %></b> need work on this screen</p>
+<% if (cards.length && !cards.some((c) => c.reachable)) { %><div class="errors">The website at <%= siteUrl %> could not be reached, so scores show only what is saved in the CMS. Start the website to see the live titles.</div><% } %>
+
+<div class="seo-grid" data-seo-grid>
+  <% for (const c of cards) { %>
+    <article class="seo-card <%= c.score >= 100 ? 'good' : c.score >= 60 ? 'mid' : 'low' %>" data-card="<%= JSON.stringify(c) %>" data-path="<%= c.path %>">
+      <header><span class="seo-type"><%= c.group %></span><b class="seo-score" data-score><%= c.score %>%</b></header>
+      <h3 title="<%= c.name %>"><%= c.name %></h3>
+      <p class="seo-path"><%= c.path %></p>
+      <div class="seo-bar"><i style="width:<%= c.score %>%"></i></div>
+      <ul class="seo-checks">
+        <li class="<%= c.checks.title ? 'ok' : '' %>">Title</li>
+        <li class="<%= c.checks.description ? 'ok' : '' %>">Description</li>
+        <li class="<%= c.checks.keywords ? 'ok' : '' %>">Keywords</li>
+        <% if ('image' in c.checks) { %><li class="<%= c.checks.image ? 'ok' : '' %>">Image</li><% } %>
+      </ul>
+      <p class="seo-title" title="<%= c.title %>"><%= c.title || "No title found" %></p>
+      <div class="seo-kws"><% for (const k of c.keywords.slice(0, 3)) { %><span class="seo-kw"><%= k %></span><% } %><% if (c.noindex) { %><span class="pill bad">noindex</span><% } %></div>
+      <footer>
+        <button type="button" class="btn light small" data-edit>Edit</button>
+        <button type="button" class="btn light small" data-fix>✨ Auto-fix</button>
+        <a class="btn light small" href="<%= siteUrl %><%= c.path %>" target="_blank" rel="noopener">View ↗</a>
+      </footer>
+    </article>
+  <% } %>
+</div>
+<% if (!cards.length) { %><div class="card"><p class="muted">No pages match.</p></div><% } %>
+
+<% if (pages > 1) { %>
+  <nav class="pager" aria-label="Pages">
+    <% const link = (n) => `/admin/seo?group=${encodeURIComponent(group)}&q=${encodeURIComponent(q)}&page=${n}`; %>
+    <% if (pageNo > 1) { %><a class="btn light small" href="<%= link(pageNo - 1) %>">← Previous</a><% } %>
+    <span class="muted">Page <%= pageNo %> of <%= pages %></span>
+    <% if (pageNo < pages) { %><a class="btn light small" href="<%= link(pageNo + 1) %>">Next →</a><% } %>
+  </nav>
+<% } %>
+
+<dialog class="modal seo-modal" data-seo-modal>
+  <form method="dialog" data-seo-form>
+    <h2 data-m-name>Edit SEO</h2>
+    <p class="muted" data-m-path></p>
+    <div class="field"><label class="f" for="m-title">SEO title</label><input id="m-title" type="text" data-m-title><div class="hint" data-m-title-count></div></div>
+    <div class="field"><label class="f" for="m-desc">Meta description</label><textarea id="m-desc" data-m-desc></textarea><div class="hint" data-m-desc-count></div></div>
+    <div class="field"><label class="f" for="m-kw">Keywords (main keyword on the first line)</label><textarea id="m-kw" data-m-kw></textarea><div class="hint">One per line. The first line is the main keyword.</div></div>
+    <label class="check"><input type="checkbox" data-m-noindex> Hide this page from Google (noindex)</label>
+    <p class="gtitle" data-m-prev-title></p>
+    <p class="gdesc" data-m-prev-desc></p>
+    <p class="err" data-m-err hidden></p>
+    <div class="toolbar mt">
+      <button type="button" class="btn lime" data-m-save>Save</button>
+      <button type="button" class="btn light" data-m-suggest>✨ Fill automatically</button>
+      <button type="button" class="btn light" data-m-close>Close</button>
+      <a class="btn light" data-m-adv>More options</a>
+    </div>
+  </form>
+</dialog>
+<script type="module" src="/static/seo-manager.js"></script>
+<%- include("partials/foot") %>

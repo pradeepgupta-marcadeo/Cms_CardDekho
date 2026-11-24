@@ -1,0 +1,47 @@
+<%- include("partials/head", { title }) %>
+<h1>How to use the CMS</h1>
+<p class="sub">Every part of the website is run from here. Whatever you Save, the website updates by itself in 2-5 seconds.</p>
+<div class="grid g2 mt">
+  <div class="card">
+    <h2>Daily work (10 minutes)</h2>
+    <ol class="help-steps">
+      <li>Open the <a href="/admin/news">News inbox</a>. Click <strong>Write with AI</strong> on today's 2-3 most useful stories.</li>
+      <li>Read the draft: check the facts against the source, fix the headline, and get the SEO score to 80%+ (see the list on the right). Set the status to <strong>published</strong> and Save.</li>
+      <li>Approve new reviews in <a href="/admin/r/reviews">Owner reviews</a>.</li>
+      <li>Check which pages are doing well in <a href="/admin/analytics">Analytics</a>, and write more content for them.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>When a new car launches</h2>
+    <ol class="help-steps">
+      <li>If the car is already listed as upcoming: open it from <a href="/admin/cars?filter=upcoming">Cars → Upcoming</a>, set the status to <strong>new-launch</strong>, fill in the price, tick "also write an AI draft of the launch news" and Save.</li>
+      <li>If the car is not listed: run <a href="/admin/imports">Import free data → VariantWise</a> (new models come in automatically), or use <a href="/admin/cars/new">+ Add a car</a>.</li>
+      <li>In the Photos tab, add a free photo from Wikimedia, then tick "Show on website".</li>
+      <li>Click "Write overview, pros/cons & FAQs" and "Generate keywords".</li>
+      <li>The car will appear by itself in "Just launched" on the home page, Latest cars, the brand page, lists and the sitemap.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>SEO rules (WEBSITE_GUARDRAILS.md)</h2>
+    <ul class="help-steps">
+      <li>Title 30–60 characters, description 120–160, different for every page.</li>
+      <li>One H1 on every page, different from the title. At least 300 words.</li>
+      <li>Main keyword: in the title, description, H1 and first paragraph; 2-4 times in the whole text, no stuffing (under 3%).</li>
+      <li>Changed a URL or removed a page? The CMS makes a 301 redirect automatically. You can also check it yourself in <a href="/admin/r/redirects">Redirects</a>.</li>
+      <li>Never put noindex on a page that should rank.</li>
+      <li>Every photo needs a credit and alt text. Use only free-license photos or your own.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Where the data comes from</h2>
+    <ul class="help-steps">
+      <li><strong>Price, variants, specs, road tax</strong>: VariantWise Open Dataset (CC BY 4.0), every Monday.</li>
+      <li><strong>Petrol/diesel</strong>: PPAC, Government of India (4 metros), every morning.</li>
+      <li><strong>Pumps, chargers, showrooms</strong>: OpenStreetMap; EV chargers also from Open Charge Map (needs a key).</li>
+      <li><strong>Photos</strong>: Wikimedia Commons (free licenses, with credit) or your own photos.</li>
+      <li><strong>News leads</strong>: RSS feeds from auto news sites, and GDELT. Only the headline and link are used; the AI writes the article from scratch.</li>
+      <li><strong>Owner reviews, offers, CNG rates, dealer phone numbers</strong>: no free source; added by hand or through the website form.</li>
+    </ul>
+  </div>
+</div>
+<%- include("partials/foot") %>

@@ -1,0 +1,12 @@
+<p class="sub"><a href="/admin/cars">← Cars</a></p>
+<div class="top">
+  <div><h1><%= car.brand_name %> <%= car.name %></h1>
+    <p class="sub"><%= car.published ? "Shown on the website" : "Hidden from the website" %> · status <strong><%= car.status %></strong><% if (car.source && car.source.name) { %> · data from <%= car.source.name %><%= car.source.asOf ? ` (${car.source.asOf})` : "" %><% } %></p></div>
+  <div class="actions"><a class="btn light" href="<%= siteUrl %>/cars/<%= car.brand_slug %>/<%= car.slug %>" target="_blank" rel="noopener">View on website ↗</a></div>
+</div>
+<nav class="tabs" aria-label="Car sections">
+  <a href="/admin/cars/<%= car.id %>" class="<%= tab === 'details' ? 'on' : '' %>">Details & content</a>
+  <a href="/admin/cars/<%= car.id %>/variants" class="<%= tab === 'variants' ? 'on' : '' %>">Variants & prices</a>
+  <a href="/admin/cars/<%= car.id %>/photos" class="<%= tab === 'photos' ? 'on' : '' %>">Photos</a>
+  <a href="/admin/seo/edit?path=<%= encodeURIComponent(`/cars/${car.brand_slug}/${car.slug}`) %>">SEO of this page</a>
+</nav>

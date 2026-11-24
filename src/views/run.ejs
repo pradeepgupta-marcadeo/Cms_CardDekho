@@ -1,0 +1,21 @@
+<%- include("partials/head", { title }) %>
+<p class="sub"><a href="/admin/imports">← Import free data</a></p>
+<h1><%= imp ? imp.title : run.kind %></h1>
+<p class="sub">Status: <span class="pill <%= run.status === 'done' ? 'ok' : run.status === 'failed' ? 'bad' : 'warn' %>" data-run-status="<%= run.id %>"><%= run.status %></span> · started <%= run.started_at.toLocaleString("en-IN") %></p>
+<div class="log mt" data-run-log="<%= run.id %>"><%= run.log || "Starting…" %></div>
+<% const s = run.summary || {}; %>
+<% if (run.status === "done") { %>
+  <div class="card mt">
+    <h2>Result</h2>
+    <% if (s.added && s.added.length !== undefined) { %>
+      <p><strong><%= s.updated.length %></strong> cars updated · <strong><%= s.added.length %></strong> new models added (hidden) · <strong><%= s.variants %></strong> variants · road tax for <strong><%= s.cities %></strong> cities · data as of <%= s.dataAsOf %></p>
+      <% if (s.added.length) { %><h3>New models (add a photo, then publish)</h3><p><% for (const n of s.added) { %><span class="kw"><%= n %></span><% } %></p><p><a class="btn lime" href="/admin/cars?filter=hidden">Open hidden cars →</a></p><% } %>
+      <% if (s.priceChanges.length) { %><h3>Price changes</h3><table><thead><tr><th>Car</th><th>Before (lakh)</th><th>Now (lakh)</th></tr></thead><tbody><% for (const p of s.priceChanges.slice(0, 60)) { %><tr><td><%= p.car %></td><td><%= p.from.join(" – ") %></td><td><%= p.to.join(" – ") %></td></tr><% } %></tbody></table><% } %>
+      <% if (s.unmatched.length) { %><h3>Our cars not found in the dataset</h3><p class="hint">Their data stays as it was. If the name is different, open the car and enter its 'VariantWise ID'.</p><p><% for (const n of s.unmatched) { %><span class="kw"><%= n %></span><% } %></p><% } %>
+    <% } else { %>
+      <pre class="log"><%= JSON.stringify(s, null, 2) %></pre>
+    <% } %>
+    <% if (run.kind === "news") { %><a class="btn lime" href="/admin/news">Open News inbox →</a><% } %>
+  </div>
+<% } %>
+<%- include("partials/foot") %>

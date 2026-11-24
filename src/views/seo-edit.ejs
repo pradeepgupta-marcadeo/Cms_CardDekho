@@ -1,0 +1,57 @@
+<%- include("partials/head", { title }) %>
+<p class="sub"><a href="/admin/seo">← Pages & SEO</a></p>
+<div class="top">
+  <div><h1><%= path %></h1><p class="sub">This page's Google snippet and keywords.</p></div>
+  <div class="actions"><a class="btn light" href="<%= siteUrl %><%= path %>" target="_blank" rel="noopener">View on website ↗</a></div>
+</div>
+<div class="layout-2">
+  <div>
+    <div class="card">
+      <h2>Right now on the website</h2>
+      <% if (liveError) { %><div class="errors"><%= liveError %></div><% } %>
+      <% if (live) { %>
+        <p><strong>Title (<%= live.title.length %>):</strong> <%= live.title %></p>
+        <p><strong>Description (<%= live.description.length %>):</strong> <%= live.description %></p>
+        <p><strong>H1:</strong> <%= live.h1 %></p>
+        <p class="muted"><strong>Canonical:</strong> <%= live.canonical %><%= live.robots ? ` · robots: ${live.robots}` : "" %></p>
+        <% if (live.headings.length) { %><p class="muted"><strong>Sub-headings:</strong> <%= live.headings.join(" · ") %></p><% } %>
+      <% } %>
+    </div>
+    <form class="card" method="post" action="/admin/seo/edit">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <input type="hidden" name="path" value="<%= path %>">
+      <h2>Custom Google snippet</h2>
+      <p class="hint">Leave these empty to use the page's automatic title/description. Every page should have a different title.</p>
+      <div class="field"><label class="f" for="title">SEO title</label><input id="title" name="title" type="text" value="<%= override.title || '' %>" data-seo="title" data-count><div class="hint">30–60 characters. Put the main keyword near the start.</div><div class="effect">The blue line in Google results and the browser tab title.</div></div>
+      <div class="field"><label class="f" for="description">Meta description</label><textarea id="description" name="description" data-seo="description" data-count><%= override.description || '' %></textarea><div class="hint">120–160 characters. Say what the page offers, in one simple line.</div><div class="effect">The grey lines in Google results.</div></div>
+      <div class="field"><label class="f" for="keywords">Keywords (main keyword first)</label><textarea id="keywords" name="keywords" data-seo="keywords"><%= kws.join("\n") %></textarea><div class="hint">Pick from the keyword bank below. First line = main keyword.</div></div>
+      <label class="check"><input type="checkbox" name="noindex" <%= override.noindex ? "checked" : "" %>> Hide this page from Google (noindex)</label>
+      <div class="hint" style="color:#b45309">⚠ Guardrails: never put noindex on a page that should rank. This page will also be removed from the sitemap.</div>
+      <div class="toolbar mt">
+        <button class="btn lime">Save</button>
+        <button class="btn light" formaction="/admin/seo/ai" data-busy="AI is writing the snippet…">AI: write title & description from these keywords</button>
+      </div>
+    </form>
+    <div class="card">
+      <h2>Keyword bank for this page (<%= bank.length %>)</h2>
+      <div><% for (const k of bank) { %><span class="kw <%= k.priority === 'high' ? 'high' : '' %>" title="<%= k.priority %>"><%= k.phrase %> <button type="button" data-add-kw="<%= k.phrase %>" aria-label="Add <%= k.phrase %>">+</button></span><% } %></div>
+      <% if (!bank.length) { %><p class="muted">No keywords target this URL yet.</p><% } %>
+      <form method="post" action="/admin/seo/keywords-ai" class="toolbar mt" data-busy="AI is researching phrases…">
+        <input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="path" value="<%= path %>">
+        <input type="text" name="topic" placeholder="Topic, e.g. Tata Punch on road price in Pune" aria-label="Topic" style="max-width:380px">
+        <button class="btn light">AI: suggest more keywords</button>
+      </form>
+      <p class="hint">For search volume: once the site is live, export the real queries from Google Search Console and add them to Keywords. That is the most accurate data.</p>
+    </div>
+  </div>
+  <aside class="seo-box">
+    <div class="card">
+      <h2>Live page SEO score</h2>
+      <% if (seo) { %>
+        <div class="score" data-seo-score><%= seo.score %>%</div><div class="muted"><%= seo.words %> words on the page</div>
+        <ul class="checks" data-seo-checks><% for (const c of seo.checks) { %><li class="<%= c.ok ? 'ok' : '' %>"><%= c.label %><% if (!c.ok) { %><div class="hint"><%= c.hint %></div><% } %></li><% } %></ul>
+      <% } else { %><p class="muted">Website not reachable.</p><% } %>
+    </div>
+  </aside>
+</div>
+<%- include("partials/foot") %>

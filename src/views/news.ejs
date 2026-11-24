@@ -1,0 +1,41 @@
+<%- include("partials/head", { title }) %>
+<div class="top">
+  <div>
+    <h1>News inbox</h1>
+    <p class="sub">A list of news from Rushlane, GaadiWaadi, MotorBeam, Autox, CarToq, CarWale and GDELT (headline and link only). Click "Write with AI": the AI reads the facts of the report and writes a draft of an original article in its own words, with keywords. The list updates by itself every 3 hours.</p>
+  </div>
+  <div class="actions">
+    <form class="inline" method="post" action="/admin/news/fetch"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime">Fetch news now</button></form>
+    <form class="inline" method="post" action="/admin/news/ignore-old"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light">Ignore leads older than 4 days</button></form>
+  </div>
+</div>
+<% if (lastRun) { %><p class="muted">Last fetch: <%= lastRun.started_at.toLocaleString("en-IN") %> · <a href="/admin/imports/runs/<%= lastRun.id %>"><%= lastRun.status %></a></p><% } %>
+<nav class="tabs">
+  <a href="?status=new" class="<%= status === 'new' && !launchOnly ? 'on' : '' %>">New (<%= counts.new %>)</a>
+  <a href="?status=new&launch=1" class="<%= launchOnly ? 'on' : '' %>">New car launches</a>
+  <a href="?status=drafted" class="<%= status === 'drafted' ? 'on' : '' %>">Drafted (<%= counts.drafted %>)</a>
+  <a href="?status=ignored" class="<%= status === 'ignored' ? 'on' : '' %>">Ignored (<%= counts.ignored %>)</a>
+</nav>
+<div class="card">
+  <table>
+    <thead><tr><th>Headline</th><th>Source</th><th>Car</th><th>When</th><th></th></tr></thead>
+    <tbody>
+      <% for (const l of list) { %>
+        <tr>
+          <td><a href="<%= l.url %>" target="_blank" rel="noopener"><%= l.title %></a><% if (l.is_launch) { %> <span class="pill lime">launch</span><% } %><% if (l.summary) { %><div class="muted"><%= l.summary.slice(0, 160) %><%= l.summary.length > 160 ? "…" : "" %></div><% } %></td>
+          <td><%= l.source %></td>
+          <td><%= l.car || "—" %><% if (!l.car && l.is_launch) { %><div><a href="/admin/cars/new?name=" class="muted">New model? Add it →</a></div><% } %></td>
+          <td class="nowrap"><%= l.published_at ? l.published_at.toLocaleDateString("en-IN") : "—" %></td>
+          <td class="right nowrap">
+            <% if (l.status === "drafted" && l.article_id) { %><a class="btn light small" href="/admin/articles/<%= l.article_id %>">Open draft</a><% } else { %>
+              <form class="inline" method="post" action="/admin/news/<%= l.id %>/draft" data-busy="AI is reading the report and writing… (about a minute)"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn lime small">Write with AI</button></form>
+              <form class="inline" method="post" action="/admin/news/<%= l.id %>/status"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="status" value="<%= l.status === 'ignored' ? 'new' : 'ignored' %>"><button class="btn light small"><%= l.status === "ignored" ? "Restore" : "Ignore" %></button></form>
+            <% } %>
+          </td>
+        </tr>
+      <% } %>
+      <% if (!list.length) { %><tr><td colspan="5" class="muted">Nothing here. Click "Fetch news now".</td></tr><% } %>
+    </tbody>
+  </table>
+</div>
+<%- include("partials/foot") %>

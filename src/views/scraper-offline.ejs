@@ -1,0 +1,13 @@
+<%- include("partials/head", { title }) %>
+<h1>Scraper</h1>
+<div class="errors mt"><%= message %></div>
+<div class="card">
+  <h2>How to start it</h2>
+  <ol class="help-steps">
+    <li>In a terminal, run <code>cd automotive-scraper</code></li>
+    <li><code>npm start</code> (first time only: <code>npm install</code>, <code>npx prisma migrate deploy</code>, <code>npm run seed</code>)</li>
+    <li>Refresh this page.</li>
+  </ol>
+  <p class="hint">The rest of the CMS (Cars, News, SEO...) keeps working without the scraper.</p>
+</div>
+<%- include("partials/foot") %>

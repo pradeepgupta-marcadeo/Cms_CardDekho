@@ -1,0 +1,87 @@
+<%- include("partials/head", { title }) %>
+<%
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const total = series.reduce((s, d) => s + d.views, 0);
+  const max = Math.max(1, ...series.map((d) => d.views));
+  const W = 700, H = 140, step = W / Math.max(1, series.length - 1);
+  const pts = series.map((d, i) => [Math.round(i * step), Math.round(H - 8 - (d.views / max) * (H - 24))]);
+  const line = pts.map((p) => p.join(",")).join(" ");
+  const area = pts.length ? `0,${H} ${line} ${W},${H}` : "";
+  const waitingTotal = stats.drafts + stats.leads + stats.pendingReviews + waiting + (scrape ? scrape.records.pending : 0);
+  const day = (d) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+%>
+<div class="top hello">
+  <div><h1><%= greet %>, <%= user.name %></h1><p class="sub"><%= new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) %> · everything on the website is managed from here.</p></div>
+  <div class="actions">
+    <form class="inline" method="post" action="/admin/refresh-website"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn light">Refresh website</button></form>
+    <a class="btn light" href="/admin/articles/new">+ Write news</a>
+    <a class="btn lime" href="/admin/cars/new">+ Add car</a>
+  </div>
+</div>
+
+<div class="grid g4" style="margin-bottom:16px">
+  <a class="stat-card info" href="/admin/cars" style="text-decoration:none;color:inherit"><div class="lbl">Cars on website</div><div class="num"><%= stats.cars %></div><div class="note"><%= stats.hidden %> hidden</div></a>
+  <a class="stat-card good" href="/admin/articles" style="text-decoration:none;color:inherit"><div class="lbl">News published</div><div class="num"><%= stats.articles %></div><div class="note"><%= stats.drafts %> drafts</div></a>
+  <div class="stat-card warn"><div class="lbl">Waiting on you</div><div class="num"><%= waitingTotal %></div><div class="note">drafts, leads, reviews, cars</div></div>
+  <a class="stat-card" href="/admin/analytics" style="text-decoration:none;color:inherit"><div class="lbl">Page views · 7 days</div><div class="num"><%= stats.views7 %></div><div class="note"><%= stats.clicks7 %> clicks</div></a>
+</div>
+
+<div class="grid" style="grid-template-columns: minmax(0, 2fr) minmax(0, 1fr)">
+  <div class="card chart">
+    <div class="top" style="margin:0"><div><h2 style="margin:0">Visitor traffic</h2><p class="hint" style="margin:2px 0 10px">Page views a day, last 30 days · <%= total %> in total</p></div><a href="/admin/analytics">Full tracking →</a></div>
+    <% if (total) { %>
+      <svg viewBox="0 0 <%= W %> <%= H %>" preserveAspectRatio="none" role="img" aria-label="Page views per day for the last 30 days">
+        <polygon points="<%= area %>" fill="#4f46e5" opacity=".12"></polygon>
+        <polyline points="<%= line %>" fill="none" stroke="#4f46e5" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>
+      </svg>
+      <div class="top" style="margin:4px 0 0"><span class="hint"><%= day(series[0].day) %></span><span class="hint">peak <%= max %> · <%= day(series[series.length - 1].day) %></span></div>
+    <% } else { %><p class="muted">No visits recorded yet. Open the website in a browser and they appear here.</p><% } %>
+  </div>
+  <div class="card">
+    <h2>Needs your attention</h2>
+    <ul class="attn">
+      <% if (scrape && scrape.records.pending) { %><li><a href="/admin/scraper/cars?status=pending"><span class="dot"></span><span><strong><%= scrape.records.pending %></strong> collected records to review</span></a></li><% } %>
+      <% if (waiting) { %><li><a href="/admin/scraper/imports"><span class="dot"></span><span><strong><%= waiting %></strong> car updates to confirm</span></a></li><% } %>
+      <% if (stats.drafts) { %><li><a href="/admin/articles?status=draft"><span class="dot"></span><span><strong><%= stats.drafts %></strong> news drafts to publish</span></a></li><% } %>
+      <% if (stats.leads) { %><li><a href="/admin/news"><span class="dot"></span><span><strong><%= stats.leads %></strong> new news leads<%= stats.launches ? `, ${stats.launches} launches` : "" %></span></a></li><% } %>
+      <% if (stats.pendingReviews) { %><li><a href="/admin/r/reviews?q=pending"><span class="dot"></span><span><strong><%= stats.pendingReviews %></strong> owner reviews to approve</span></a></li><% } %>
+      <% if (stats.hidden) { %><li><a href="/admin/cars?filter=hidden"><span class="dot"></span><span><strong><%= stats.hidden %></strong> cars hidden (no photo or not shown)</span></a></li><% } %>
+      <% if (stats.noCopy) { %><li><a href="/admin/cars?filter=nocopy"><span class="dot"></span><span><strong><%= stats.noCopy %></strong> live cars without a buying guide</span></a></li><% } %>
+      <% if (scrape && scrape.jobs.failed) { %><li><a href="/admin/scraper/jobs?status=failed"><span class="dot red"></span><span><strong><%= scrape.jobs.failed %></strong> failed scraper jobs</span></a></li><% } %>
+      <% if (!waitingTotal && !stats.hidden && !stats.noCopy) { %><li><a href="/admin"><span class="dot green"></span><span>All clear.</span></a></li><% } %>
+    </ul>
+  </div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <div class="top" style="margin:0"><h2>Scraper</h2><a href="/admin/scraper">Open →</a></div>
+    <% if (scrape) { %>
+      <div class="stats3" style="margin:8px 0 12px">
+        <div><div class="stat"><%= scrape.catalogue.models %></div><small class="muted">cars</small></div>
+        <div><div class="stat"><%= scrape.catalogue.variants %></div><small class="muted">variants</small></div>
+        <div><div class="stat"><%= scrape.catalogue.images %></div><small class="muted">licensed photos</small></div>
+      </div>
+      <p class="muted mb0">Last success: <%= scrape.jobs.lastSuccessAt ? new Date(scrape.jobs.lastSuccessAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "never" %><%= scrape.jobs.lastSuccessSource ? ` · ${scrape.jobs.lastSuccessSource}` : "" %></p>
+    <% } else { %>
+      <p class="muted">The scraper service is not running. Start it with <code>npm start</code> in the <code>automotive-scraper</code> folder.</p>
+    <% } %>
+  </div>
+  <div class="card">
+    <div class="top" style="margin:0"><h2>Recent activity</h2><a href="/admin/activity">Full log →</a></div>
+    <table><tbody><% for (const r of recent) { %><tr><td class="nowrap muted"><%= r.ts.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) %></td><td><%= r.user_name || "system" %></td><td><%= r.action %> <%= r.entity %></td></tr><% } %></tbody></table>
+  </div>
+</div>
+
+<% const demoTotal = Object.values(demo).reduce((s, n) => s + n, 0); if (demoTotal) { %>
+<details class="card">
+  <summary><strong>Sample content still on the site (<%= demoTotal %>)</strong> <span class="hint">Dummy data from the prototype. Remove it once the real data is in.</span></summary>
+  <table class="mt"><tbody>
+    <% for (const [k, label] of [["articles", "Demo news & reviews"], ["offers", "Demo offers"], ["dealers", "Demo dealers"], ["stations", "Demo fuel & EV stations"], ["reviews", "Demo owner reviews"], ["fuel", "Demo fuel prices"]]) { %>
+      <tr><td><%= label %></td><td><%= demo[k] %></td><td class="right"><% if (demo[k]) { %><form class="inline" method="post" action="/admin/demo/remove" data-confirm="Delete all <%= demo[k] %> <%= label.toLowerCase() %>? Pages that only had demo data will become empty until you add real data."><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="what" value="<%= k %>"><button class="btn danger small">Remove</button></form><% } %></td></tr>
+    <% } %>
+  </tbody></table>
+</details>
+<% } %>
+<%- include("partials/foot") %>
