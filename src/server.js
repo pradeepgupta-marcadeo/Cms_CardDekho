@@ -97,7 +97,7 @@ app.use((err, req, res, _next) => {
   res.status(500).render("error", { title: "Something went wrong", message: err.message });
 });
 
-// On Vercel the app is a serverless function (api/index.js): no server of its own, no background jobs
+// On Vercel the app is a serverless function (api/index.mjs): no server of its own, no background jobs
 // (scraping and schedules run from the CMS on your own computer).
 export default app;
 
