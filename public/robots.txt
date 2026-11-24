@@ -1,0 +1,3 @@
+# The CMS is private: nothing here should appear in search results.
+User-agent: *
+Disallow: /
